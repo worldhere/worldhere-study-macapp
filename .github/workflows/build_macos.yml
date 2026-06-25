@@ -28,43 +28,48 @@ jobs:
         run: |
           python -c "import flask; import requests; import openpyxl; import PIL; print('All imports OK')"
 
-      - name: Build .app
+      - name: Build .app using spec file
         run: |
           echo "=== Python version ==="
           python --version
           echo "=== PyInstaller version ==="
           python -m PyInstaller --version
-          echo "=== Checking files ==="
-          ls -la run_app.py app.py db.py
-          ls -la templates/
-          ls -la static/
-          echo "=== Running PyInstaller ==="
-          python -m PyInstaller \
-            --name=RunningMan \
-            --console \
-            --add-data="templates:templates" \
-            --add-data="static:static" \
-            --hidden-import=flask.json \
-            --hidden-import=jinja2.ext \
-            run_app.py 2>&1 | tee build_output.log
+          echo "=== Checking spec file ==="
+          ls -la running_man_macos.spec
+          echo "=== Running PyInstaller with spec file ==="
+          python -m PyInstaller running_man_macos.spec --noconfirm 2>&1 | tee build_output.log
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "=== Build exit code: $BUILD_EXIT ==="
           echo "=== Build complete ==="
           ls -la dist/ 2>/dev/null || echo "dist/ not created"
-          find dist/ -type f -o -type d 2>/dev/null || echo "no files in dist/"
           echo "=== Full dist structure ==="
-          find dist/ -name "*" 2>/dev/null || echo "find failed"
+          find dist/ 2>/dev/null || echo "find failed"
 
       - name: Verify build
         run: |
-          ls -la dist/
-          ls -la dist/RunningMan.app/Contents/MacOS/
+          echo "=== Checking dist directory ==="
+          ls -la dist/ 2>/dev/null || echo "dist not found"
+          echo "=== Looking for .app bundle ==="
+          find dist/ -name "*.app" -type d 2>/dev/null || echo "No .app found"
+          echo "=== Checking RunningMan directory ==="
+          ls -la dist/RunningMan/ 2>/dev/null || echo "RunningMan dir not found"
+          echo "=== Checking if .app exists ==="
+          test -d "dist/RunningMan.app" && echo ".app EXISTS" || echo ".app NOT FOUND"
 
       - name: Package as DMG
         run: |
           hdiutil create -volname "RunningMan" -srcfolder dist/RunningMan.app -ov -format UDZO dist/RunningMan.dmg
 
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build_output.log
+          retention-days: 7
+
       - name: Upload artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: RunningMan-macos
