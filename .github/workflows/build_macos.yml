@@ -30,10 +30,15 @@ jobs:
 
       - name: Build .app
         run: |
-          set -x
-          ls -la
+          echo "=== Python version ==="
+          python --version
+          echo "=== PyInstaller version ==="
+          python -m PyInstaller --version
+          echo "=== Checking files ==="
+          ls -la run_app.py app.py db.py
           ls -la templates/
           ls -la static/
+          echo "=== Running PyInstaller ==="
           python -m PyInstaller \
             --name=RunningMan \
             --console \
@@ -41,8 +46,9 @@ jobs:
             --add-data="static:static" \
             --hidden-import=flask.json \
             --hidden-import=jinja2.ext \
-            run_app.py 2>&1 || true
-          echo "Build exit code: $?"
+            run_app.py 2>&1
+          echo "=== Build complete ==="
+          ls -la dist/ 2>/dev/null || echo "dist/ not created"
 
       - name: Verify build
         run: |
