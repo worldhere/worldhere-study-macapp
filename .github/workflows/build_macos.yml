@@ -19,17 +19,90 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
           python -m pip install pyinstaller
 
-      - name: Test imports
+      - name: Verify installation
         run: |
-          python -c "import app; print('app imported successfully')"
+          python --version
+          pip show flask pyinstaller requests openpyxl pillow
 
-      - name: Build .app
+      - name: Build .app with pyinstaller CLI
         run: |
-          python -m PyInstaller running_man_macos.spec --noconfirm --clean 2>&1
+          python -m PyInstaller \
+            --name=RunningMan \
+            --console \
+            --add-data="templates:templates" \
+            --add-data="static:static" \
+            --hidden-import=flask.json \
+            --hidden-import=werkzeug \
+            --hidden-import=jinja2 \
+            --hidden-import=jinja2.ext \
+            --hidden-import=sqlite3 \
+            --hidden-import=requests \
+            --hidden-import=openpyxl \
+            --hidden-import=PIL \
+            --hidden-import=PIL.Image \
+            --hidden-import=PIL.ImageDraw \
+            --hidden-import=PIL.ImageFont \
+            --hidden-import=webbrowser \
+            --hidden-import=threading \
+            --hidden-import=signal \
+            --hidden-import=json \
+            --hidden-import=datetime \
+            --hidden-import=re \
+            --hidden-import=glob \
+            --hidden-import=argparse \
+            --hidden-import=contextlib \
+            --hidden-import=urllib.request \
+            --hidden-import=concurrent.futures \
+            --hidden-import=concurrent.futures.thread \
+            --hidden-import=app \
+            --hidden-import=db \
+            --hidden-import=utils \
+            --hidden-import=save_utils \
+            --hidden-import=import_utils \
+            --hidden-import=undo_utils \
+            --hidden-import=auto_assign \
+            --hidden-import=feishu_token \
+            --hidden-import=feishu_sync \
+            --hidden-import=routes \
+            --hidden-import=routes.views \
+            --hidden-import=routes.machines \
+            --hidden-import=routes.tasks \
+            --hidden-import=routes.schedules \
+            --hidden-import=routes.schedule_ops \
+            --hidden-import=routes.schedule_cut \
+            --hidden-import=routes.settings \
+            --hidden-import=routes.saves \
+            --hidden-import=routes.shift_posts \
+            --hidden-import=routes.feishu \
+            --hidden-import=routes.undo \
+            --hidden-import=routes.summary \
+            --hidden-import=models \
+            --hidden-import=models.summary \
+            --hidden-import=models.recycle \
+            --hidden-import=models.queries \
+            --hidden-import=models.packages \
+            --hidden-import=models.config \
+            --hidden-import=feishu \
+            --hidden-import=feishu.common \
+            --hidden-import=feishu.table_utils \
+            --hidden-import=feishu.config_table \
+            --hidden-import=feishu.schedule_sync \
+            --hidden-import=feishu.status \
+            --hidden-import=feishu.lifecycle \
+            --hidden-import=feishu.init_engine \
+            --hidden-import=feishu.sync_loop \
+            --hidden-import=feishu.groups \
+            --hidden-import=feishu.events \
+            --hidden-import=feishu.events.cards \
+            --hidden-import=feishu.events.dispatch \
+            --hidden-import=feishu.events.feishu_source \
+            --hidden-import=feishu.events.local_source \
+            --hidden-import=feishu.events.shared \
+            run_app.py
 
       - name: Package as DMG
         run: |
