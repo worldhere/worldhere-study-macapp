@@ -46,9 +46,14 @@ jobs:
             --add-data="static:static" \
             --hidden-import=flask.json \
             --hidden-import=jinja2.ext \
-            run_app.py 2>&1
+            run_app.py 2>&1 | tee build_output.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "=== Build exit code: $BUILD_EXIT ==="
           echo "=== Build complete ==="
           ls -la dist/ 2>/dev/null || echo "dist/ not created"
+          find dist/ -type f -o -type d 2>/dev/null || echo "no files in dist/"
+          echo "=== Full dist structure ==="
+          find dist/ -name "*" 2>/dev/null || echo "find failed"
 
       - name: Verify build
         run: |
