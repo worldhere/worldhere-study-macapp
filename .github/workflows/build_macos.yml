@@ -23,11 +23,13 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install pyinstaller
 
+      - name: Test imports
+        run: |
+          python -c "import app; print('app imported successfully')"
+
       - name: Build .app
         run: |
-          python --version
-          pip list
-          python -m PyInstaller running_man_macos.spec --noconfirm --clean 2>&1 | tail -100
+          python -m PyInstaller running_man_macos.spec --noconfirm --clean
 
       - name: Package as DMG
         run: |
