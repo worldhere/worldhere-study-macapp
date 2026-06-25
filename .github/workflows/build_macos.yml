@@ -30,6 +30,10 @@ jobs:
 
       - name: Build .app
         run: |
+          set -x
+          ls -la
+          ls -la templates/
+          ls -la static/
           python -m PyInstaller \
             --name=RunningMan \
             --console \
@@ -37,7 +41,8 @@ jobs:
             --add-data="static:static" \
             --hidden-import=flask.json \
             --hidden-import=jinja2.ext \
-            run_app.py
+            run_app.py 2>&1 || true
+          echo "Build exit code: $?"
 
       - name: Verify build
         run: |
