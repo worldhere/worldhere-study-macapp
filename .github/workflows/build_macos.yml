@@ -25,7 +25,9 @@ jobs:
 
       - name: Build .app
         run: |
-          python -m PyInstaller running_man_macos.spec --noconfirm --clean
+          python --version
+          pip list
+          python -m PyInstaller running_man_macos.spec --noconfirm --clean 2>&1 | tail -100
 
       - name: Package as DMG
         run: |
