@@ -1,0 +1,545 @@
+<!-- ==================== 弹窗 ==================== -->
+
+<!-- 任务编辑侧边抽屉 -->
+<div id="task-edit-drawer" style="display:none;">
+    <div class="drawer-overlay" onclick="closeEditDrawer()"></div>
+    <div class="drawer-panel edit-dialog-transparent" id="drawer-panel">
+        <div class="drawer-header">
+            <h2><span class="drawer-icon">&#9998;</span> 修改任务</h2>
+            <button class="drawer-close" onclick="closeEditDrawer()">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div class="drawer-section">
+                <div class="drawer-section-title">基本字段</div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field">
+                        <label>任务名</label>
+                        <input id="ed_name">
+                    </div>
+                    <div class="drawer-field">
+                        <label>机型</label>
+                        <select id="ed_type">{% for mt in app_config.machine_types %}<option>{{mt.key}}</option>{% endfor %}</select>
+                    </div>
+                </div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field">
+                        <label>任务类型</label>
+                        <select id="ed_kind">{% for tk in app_config.task_kinds %}<option>{{tk.key}}</option>{% endfor %}</select>
+                    </div>
+                    <div class="drawer-field">
+                        <label>优先级</label>
+                        <select id="ed_pri">{% for p in app_config.priorities %}<option>{{p.key}}</option>{% endfor %}</select>
+                    </div>
+                </div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field">
+                        <label>难度</label>
+                        <select id="ed_diff">{% for d in app_config.difficulties %}<option value="{{'' if d.key=='无' else d.key}}">{{d.key}}</option>{% endfor %}</select>
+                    </div>
+                    <div class="drawer-field">
+                        <label>备注</label>
+                        <input id="ed_remark" placeholder="备注信息">
+                    </div>
+                </div>
+            </div>
+            <div class="drawer-section">
+                <div class="drawer-section-title">预估时长</div>
+                <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                    <label><input type="radio" name="ed_est_mode" value="auto" onchange="toggleEditEstMode()">自动</label>
+                    <label><input type="radio" name="ed_est_mode" value="blank" onchange="toggleEditEstMode()">不填</label>
+                    <label><input type="radio" name="ed_est_mode" value="direct" onchange="toggleEditEstMode()">直接预估</label>
+                    <label><input type="radio" name="ed_est_mode" value="calc" onchange="toggleEditEstMode()">计算预估</label>
+                </div>
+                <div id="ed-direct" style="display:none;margin-top:8px;">
+                    <div class="drawer-field">
+                        <label>时长</label>
+                        <input id="ed_duration" placeholder="如 2h / 90min">
+                    </div>
+                </div>
+                <div id="ed-calc" style="display:none;margin-top:8px;">
+                    <div class="drawer-field-row">
+                        <div class="drawer-field"><label>操作(秒)</label><input id="ed_op"></div>
+                        <div class="drawer-field"><label>复位(秒)</label><input id="ed_reset"></div>
+                    </div>
+                    <div class="drawer-field-row">
+                        <div class="drawer-field"><label>条数</label><input id="ed_count" oninput="syncCountToExpcnt('ed_count','ed_expcnt')"></div>
+                        <div class="drawer-field"><label>冗余(分钟)</label><input id="ed_red" value="0"></div>
+                    </div>
+                    <div class="drawer-field-row" style="margin-top:8px;">
+                        <button onclick="previewEditCalc()">计算</button>
+                        <span id="ed-calc-preview" style="color:#666;font-size:12px;"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="drawer-section">
+                <div class="drawer-section-title">详细字段</div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field"><label>RBP任务ID</label><input id="ed_rbp_id"></div>
+                    <div class="drawer-field"><label>场景</label><input id="ed_scene"></div>
+                </div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field"><label>通用类别</label><input id="ed_gcat"></div>
+                    <div class="drawer-field"><label>来源链接</label><input id="ed_slink" placeholder="http://..."></div>
+                </div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field"><label>预期采集量</label><input id="ed_expcnt" type="number" oninput="syncCountToExpcnt('ed_expcnt','ed_count')"></div>
+                    <div class="drawer-field"><label>数采需求ID</label><input id="ed_creqid"></div>
+                </div>
+                <div class="drawer-field-row">
+                    <div class="drawer-field"><label>数采需求类型</label><input id="ed_creqtype"></div>
+                    <div class="drawer-field"></div>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-footer">
+            <button class="btn-drawer-cancel" onclick="closeEditDrawer()">取消</button>
+            <button class="btn-drawer-primary" onclick="submitEditDrawer()">确认修改</button>
+        </div>
+    </div>
+    <input type="hidden" id="edit-tid">
+</div>
+
+<!-- 修改历史记录弹窗 -->
+<div id="history-edit-dialog" style="display:none;">
+    <div class="hist-dialog-overlay" onclick="closeHistoryEdit()">
+        <div class="hist-dialog-card hist-dialog-transparent" onclick="event.stopPropagation()">
+            <div class="hist-dialog-header">
+                <h2><span class="hist-dialog-icon">&#9998;</span> 修改历史记录</h2>
+                <button class="drawer-close" onclick="closeHistoryEdit()">&times;</button>
+            </div>
+            <div class="hist-dialog-body">
+                <!-- 时间段区 -->
+                <div class="hist-time-section">
+                    <div class="hist-time-section-header">实际完成时间段</div>
+                    <div class="hist-time-section-body">
+                        <div class="hist-time-grid">
+                            <div class="hist-time-block">
+                                <div class="hist-time-block-label">开始</div>
+                                <div class="hist-time-block-fields">
+                                    <input type="date" id="he_start_date">
+                                    <input type="time" id="he_start_time" value="00:00">
+                                </div>
+                            </div>
+                            <div class="hist-time-arrow">→</div>
+                            <div class="hist-time-block">
+                                <div class="hist-time-block-label">结束</div>
+                                <div class="hist-time-block-fields">
+                                    <input type="date" id="he_end_date">
+                                    <input type="time" id="he_end_time" value="00:00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 更多字段 -->
+                <button class="hist-collapse-toggle" onclick="toggleHistMoreFields(this)">
+                    <span class="arrow">▶</span> 更多字段
+                </button>
+                <div class="hist-fields-section" id="hist-more-fields" style="display:none;">
+                    <div class="hist-fields-grid">
+                        <div class="hist-field-group">
+                            <label>任务名</label>
+                            <input id="he_task_name">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>机型</label>
+                            <select id="he_type">{% for mt in app_config.machine_types %}<option>{{mt.key}}</option>{% endfor %}</select>
+                        </div>
+                        <div class="hist-field-group">
+                            <label>任务类型</label>
+                            <select id="he_kind">{% for tk in app_config.task_kinds %}<option>{{tk.key}}</option>{% endfor %}</select>
+                        </div>
+                        <div class="hist-field-group">
+                            <label>优先级</label>
+                            <select id="he_pri">{% for p in app_config.priorities %}<option>{{p.key}}</option>{% endfor %}</select>
+                        </div>
+                        <div class="hist-field-group">
+                            <label>难度</label>
+                            <select id="he_diff">{% for d in app_config.difficulties %}<option value="{{'' if d.key=='无' else d.key}}">{{d.key}}</option>{% endfor %}</select>
+                        </div>
+                        <div class="hist-field-group" style="flex-direction:column;align-items:stretch;">
+                            <label>维修记录</label>
+                            <div id="he-repair-records" style="max-height:200px;overflow-y:auto;font-size:12px;"></div>
+                        </div>
+                        <div class="hist-field-group">
+                            <label>机器</label>
+                            <input type="hidden" id="he_machine_id">
+                            <input id="he_machine_name" readonly style="background:var(--bg-sidebar);color:var(--text-muted);">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>RBP任务ID</label>
+                            <input id="he_rbp_task_id">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>场景</label>
+                            <input id="he_scene">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>通用类别</label>
+                            <input id="he_general_category">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>来源链接</label>
+                            <input id="he_source_link">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>预期采集量</label>
+                            <input id="he_expected_count" type="number">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>数采需求ID</label>
+                            <input id="he_collection_req_id">
+                        </div>
+                        <div class="hist-field-group">
+                            <label>数采需求类型</label>
+                            <input id="he_collection_req_type">
+                        </div>
+                        <div class="hist-field-group" style="grid-column:1/-1;">
+                            <label>备注</label>
+                            <input id="he_remark" placeholder="备注信息">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="hist-dialog-footer">
+                <button class="btn-drawer-cancel" onclick="closeHistoryEdit()">取消</button>
+                <button class="btn-drawer-primary" onclick="submitHistoryEdit()">保存修改</button>
+            </div>
+        </div>
+    </div>
+    <input type="hidden" id="he-sid">
+</div>
+
+<!-- 导入Excel预览弹窗 -->
+<div id="import-dialog" style="display:none;position:fixed;left:50%;top:5%;transform:translateX(-50%);z-index:2000;min-width:700px;max-width:95vw;max-height:85vh;overflow-y:auto;background:var(--bg-card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-xl);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <b>导入预览</b>
+        <button onclick="closeImportDialog()">X</button>
+    </div>
+    <div id="import-summary" style="margin-bottom:10px;font-size:13px;color:#666;"></div>
+    <div id="import-sheet-selector" style="display:none;margin-bottom:10px;font-size:12px;">
+        <b>工作表：</b>
+        <select id="import-sheet-select" onchange="_onImportSheetChange(this.value)"></select>
+    </div>
+    <div id="import-field-map" style="margin-bottom:10px;font-size:12px;color:#999;"></div>
+    <div style="margin-bottom:6px;display:flex;gap:10px;">
+        <button class="tool-btn" onclick="importSelectAll()">全选</button>
+        <button onclick="importSelectNone()">取消全选</button>
+        <button onclick="importSelectOk()">仅选可导入</button>
+    </div>
+    <div style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-xs);">
+        <table id="import-preview-table" style="font-size:12px;">
+            <tr><th>导入</th><th>任务名</th><th>机型</th><th>任务类型</th><th>优先级</th><th>预估时长</th><th>RBP任务ID</th><th>状态</th><th>提示</th></tr>
+        </table>
+    </div>
+    <div id="import-missing-types" style="display:none;margin-top:8px;padding:8px 12px;background:#fff3cd;border-radius:4px;font-size:13px;">
+        <div id="import-missing-types-text" style="color:#856404;"></div>
+        <label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;">
+            <input type="checkbox" id="import-sync-types-check" checked>
+            <span style="color:#856404;">同步添加以上类型到设置（推荐）</span>
+        </label>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" onclick="confirmImport()">确认导入已选项</button>
+        <button onclick="closeImportDialog()">取消</button>
+    </div>
+</div>
+
+<!-- 指派任务弹窗 -->
+<div id="assign-dialog" style="display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2000;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto;background:var(--bg-card);border-radius:12px;box-shadow:var(--shadow-xl);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border-light);">
+        <h2 style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin:0;">
+            <span style="width:32px;height:32px;background:linear-gradient(135deg,var(--primary),var(--primary-hover));border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;">&#128204;</span>
+            指派任务
+        </h2>
+        <button onclick="closeAssignDialog()" style="width:32px;height:32px;border-radius:6px;border:none;background:var(--bg-body);font-size:16px;cursor:pointer;color:var(--text-muted);">&times;</button>
+    </div>
+    <div style="padding:20px 24px;font-size:13px;">
+        <div id="assign-task-info" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-body);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;"></div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">目标机器</label>
+            <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;" id="assign-machine-wrap">
+                <select id="assign-machine" onchange="onAssignMachineChange()" style="flex:1;padding:9px 12px;border:none;outline:none;font-size:13px;background:var(--bg-card);"></select>
+                <span id="assign-machine-badge" style="display:none;background:#ecfdf5;color:#059669;padding:4px 12px;font-size:10px;font-weight:700;">★推荐</span>
+            </div>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:14px;">
+            <div style="flex:1;" id="assign-start-group">
+                <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">开始时间 <span id="assign-start-badge" style="color:#10b981;display:none;">★推荐空档</span></label>
+                <div style="display:flex;gap:6px;">
+                    <input type="date" id="assign-start-date" onchange="onAssignTimeChange()" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:6px;font-size:13px;min-width:0;">
+                    <input type="time" id="assign-start-time" onchange="onAssignTimeChange()" style="flex:1;padding:8px 10px;border:2px solid var(--border);border-radius:6px;font-size:13px;min-width:0;">
+                </div>
+            </div>
+            <div style="flex:1;" id="assign-end-group">
+                <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">结束时间 <span style="color:var(--text-muted);">自动</span></label>
+                <div style="display:flex;gap:6px;">
+                    <input type="date" id="assign-end-date" onchange="onAssignTimeChange()" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text-muted);min-width:0;">
+                    <input type="time" id="assign-end-time" onchange="onAssignTimeChange()" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text-muted);min-width:0;">
+                </div>
+            </div>
+        </div>
+        <button onclick="cycleRecommend()" id="assign-cycle-btn" style="width:100%;padding:7px;font-size:11px;background:var(--bg-body);border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);cursor:pointer;margin-bottom:14px;">🔄 切换推荐组合</button>
+        <div style="border-top:1px solid var(--border-light);padding-top:14px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:12px;font-weight:600;" id="assign-timeline-title">排班预览 <span style="color:var(--text-muted);font-weight:400;">跟随主视图</span></span>
+                <span style="font-size:10px;color:var(--text-muted);">← 滚动 →</span>
+            </div>
+            <div id="assign-mini-timeline" style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg-body);"></div>
+        </div>
+        <div id="assign-conflict-warn" style="display:none;align-items:flex-start;gap:8px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;font-size:12px;margin-bottom:14px;">
+            <span>⚠️</span><div id="assign-conflict-text"></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="closeAssignDialog()" style="padding:9px 22px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);font-size:13px;cursor:pointer;">取消</button>
+            <button onclick="submitAssign()" style="padding:9px 22px;background:linear-gradient(135deg,var(--primary),var(--primary-hover));color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,0.3);cursor:pointer;">确认指派 · 覆盖冲突</button>
+        </div>
+    </div>
+    <input type="hidden" id="assign-tid">
+</div>
+
+<!-- 弹窗遮罩层 -->
+<div id="dialog-backdrop" class="dialog-backdrop" onclick="
+    if(document.getElementById('auto-assign-dialog').style.display==='block') AA.cancel();
+    if(document.getElementById('mass-delay-dialog').style.display==='block') closeMassDelayDialog();
+    if(document.getElementById('cut-dialog').style.display==='block') closeCutDialog();
+"></div>
+
+<!-- 批量延迟弹窗 -->
+<div id="mass-delay-dialog" class="dialog-transparent" style="display:none;position:fixed;left:50%;top:15%;transform:translateX(-50%);z-index:2000;min-width:500px;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-xl);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <b>批量延迟任务</b>
+        <button onclick="closeMassDelayDialog()">X</button>
+    </div>
+    <div style="margin-bottom:10px;">
+        <label>日期：<input id="md-date" type="date" value="{{selected_date}}"></label>
+    </div>
+
+    <!-- 延迟方式 -->
+    <div style="margin-bottom:8px;">
+        <b>延迟方式：</b>
+        <label style="margin-left:8px;"><input type="radio" name="md-mode" value="shift" checked> 平移延迟</label>
+        <label style="margin-left:8px;"><input type="radio" name="md-mode" value="extend"> 拉伸延迟</label>
+        <span class="md-help" style="display:none;font-size:11px;color:var(--text-muted);margin-left:4px;">— 平移：开始+结束同时后移；拉伸：只延长结束时间</span>
+    </div>
+
+    <!-- 填充策略 -->
+    <div style="margin-bottom:8px;">
+        <b>填充策略：</b>
+        <label style="margin-left:8px;"><input type="radio" name="md-strategy" value="block" checked> 整体后移</label>
+        <label style="margin-left:8px;"><input type="radio" name="md-strategy" value="smart"> 智能填充</label>
+        <span class="md-help" style="display:none;font-size:11px;color:var(--text-muted);margin-left:4px;">— 整体：保留间隔整块平移；智能：优先占空位，无空位再后移</span>
+    </div>
+
+    <!-- 时间来源 -->
+    <div style="margin-bottom:8px;">
+        <b>时间来源：</b>
+        <label style="margin-left:8px;"><input type="radio" name="md-time-src" value="manual" onchange="_onMDTimeSrcChange()"> 手动指定</label>
+        <label style="margin-left:8px;"><input type="radio" name="md-time-src" value="now" checked onchange="_onMDTimeSrcChange()"> 当前时间</label>
+        <span class="md-help" style="display:none;font-size:11px;color:var(--text-muted);margin-left:4px;">— 手动：从指定时间之后延迟；当前时间：自动取此刻</span>
+    </div>
+
+    <div style="margin-bottom:10px;">
+        <b>选择机器：</b>
+        <label style="font-size:12px;cursor:pointer;margin-left:8px;"><input type="checkbox" id="md-machine-all" onchange="toggleMDMachines(this.checked)" checked> 全选</label>
+        <span id="md-type-links" style="font-size:11px;margin-left:4px;">
+            {% for mt in app_config.machine_types %}<a href="#" onclick="toggleMDMachinesByType('{{mt.key}}');return false;" style="color:var(--type-color-{{loop.index0}});{% if not loop.first %}margin-left:4px;{% endif %}">{{mt.key}}</a>{% endfor %}
+        </span>
+        <div id="md-machine-list" style="max-height:120px;overflow-y:auto;border:1px solid var(--border);padding:6px;border-radius:var(--radius-xs);display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">加载中...</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
+        <label>提前/延迟(分钟)：<input id="md-delay" type="number" value="30" min="-4320" max="4320" style="width:80px"></label>
+        <span id="md-from-wrap"><label>从此时间之后：<input id="md-from" style="width:80px" placeholder="00:00"></label></span>
+        <span id="md-now-hint" style="display:none;font-size:12px;color:var(--accent);">（执行时自动取当前时间）</span>
+    </div>
+    <div style="margin-bottom:10px;">
+        <label style="font-size:12px;cursor:pointer;"><input type="checkbox" id="md-include-completed"> 延迟已完成任务</label>
+        <span class="md-help" style="display:none;font-size:11px;color:var(--text-muted);margin-left:4px;">— 勾选后已完成任务也参与延迟，其他任务可占用已完成任务释放的时间</span>
+        <label style="margin-left:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="md-extend-over-breaks" checked> 跨休息段自动延长排班时长</label>
+    </div>
+    <div style="margin-bottom:10px;">
+        <label style="font-size:12px;cursor:pointer;"><input type="checkbox" id="md-show-help" onchange="_onMDHelpToggle()"> 显示功能说明</label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" style="background:var(--warning);" onclick="executeMassDelay()">执行延迟</button>
+        <button onclick="closeMassDelayDialog()">取消</button>
+    </div>
+</div>
+
+<!-- 切割任务弹窗 -->
+<div id="cut-dialog" class="dialog-transparent" style="display:none;position:fixed;left:50%;top:20%;transform:translateX(-50%);z-index:2000;min-width:420px;max-width:500px;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-xl);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <b>切割任务</b>
+        <button onclick="closeCutDialog()">X</button>
+    </div>
+    <div style="margin-bottom:8px;">
+        <p>任务：<b id="cut-task-name">-</b></p>
+        <p>总预期采集量：<b id="cut-total-items">-</b> 条</p>
+    </div>
+    <div style="margin:12px 0;">
+        <label>已完成条数：<input id="cut-items-done" type="number" min="1" style="width:100px" oninput="(function(){var v=parseInt(document.getElementById('cut-items-done').value,10);var t=parseInt(document.getElementById('cut-total-items').textContent,10);if(!isNaN(v)&&!isNaN(t))document.getElementById('cut-items-remain').textContent=String(Math.max(0,t-v));else document.getElementById('cut-items-remain').textContent='-';})()"></label>
+        <span style="margin-left:8px;color:var(--text-muted);">剩余：<b id="cut-items-remain">-</b> 条</span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn" id="cut-confirm-btn" onclick="confirmCutDialogWrapper()">确认切割</button>
+        <button id="cut-skip-btn" onclick="closeCutDialog();startCutDragLineFromDialog()">跳过（拖拽切割线）</button>
+        <button onclick="closeCutDialog()">取消</button>
+    </div>
+</div>
+
+<!-- 自定义确认弹窗 -->
+<div id="confirm-dialog" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box">
+        <div class="confirm-header">
+            <span id="confirm-title">确认操作</span>
+            <button class="confirm-close" onclick="closeConfirm(false)">×</button>
+        </div>
+        <div id="confirm-message" class="confirm-body"></div>
+        <div class="confirm-footer">
+            <button class="btn confirm-cancel" onclick="closeConfirm(false)">取消</button>
+            <button class="btn confirm-ok" onclick="closeConfirm(true)">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- 自定义输入弹窗 -->
+<div id="prompt-dialog" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box">
+        <div class="confirm-header">
+            <span id="prompt-title">输入</span>
+            <button class="confirm-close" onclick="closePrompt(null)">×</button>
+        </div>
+        <div class="confirm-body">
+            <label id="prompt-label" style="display:block;margin-bottom:8px;font-size:14px;color:var(--text-secondary);"></label>
+            <input id="prompt-input" type="text" class="prompt-input-field"
+                   onkeydown="if(event.key==='Enter')closePrompt(this.value);if(event.key==='Escape')closePrompt(null);">
+        </div>
+        <div class="confirm-footer">
+            <button class="btn confirm-cancel" onclick="closePrompt(null)">取消</button>
+            <button class="btn confirm-ok" onclick="closePrompt(document.getElementById('prompt-input').value)">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- 截图预览弹窗 -->
+<div id="screenshot-preview-dialog" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box" style="max-width:90vw;width:auto;">
+        <div class="confirm-header">
+            <span id="screenshot-preview-title">📸 排班截图预览</span>
+            <button class="confirm-close" onclick="closeScreenshotPreview(false)">×</button>
+        </div>
+        <div class="confirm-body" style="padding:4px;text-align:center;max-height:75vh;overflow:auto;">
+            <img id="screenshot-preview-img" src="" style="max-width:100%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.1);" alt="截图预览">
+        </div>
+        <div class="confirm-footer" style="justify-content:space-between;">
+            <button class="btn" onclick="saveScreenshotLocal()" style="background:#6b7280;color:#fff;">💾 保存到本地</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn confirm-cancel" onclick="closeScreenshotPreview(false)">取消</button>
+              <button class="btn confirm-ok" onclick="closeScreenshotPreview(true)">📤 发送到飞书</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批量添加机器弹窗（合并版） -->
+<div id="batch-machine-dialog" style="display:none;position:fixed;left:50%;top:5%;transform:translateX(-50%);z-index:2000;min-width:680px;max-width:95vw;max-height:88vh;overflow-y:auto;background:var(--bg-card);border-radius:var(--radius);padding:0;box-shadow:var(--shadow-xl);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border);">
+        <h3 style="margin:0;font-size:16px;">&#x1F4E6; 批量添加机器</h3>
+        <button onclick="closeBatchMachineDialog()" style="font-size:20px;background:none;border:none;cursor:pointer;color:var(--text-muted);">&times;</button>
+    </div>
+    <div style="padding:20px 24px;">
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;margin-bottom:14px;border-bottom:2px solid var(--border);">
+            <button class="batch-tab active" onclick="switchBatchTab('range')" id="batch-tab-range" style="padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;background:var(--bg-card);color:var(--primary);border:2px solid var(--border);border-bottom:2px solid var(--bg-card);border-radius:var(--radius-xs) var(--radius-xs) 0 0;margin-bottom:-2px;margin-right:2px;">&#x1F4D0; 范围生成</button>
+            <button class="batch-tab" onclick="switchBatchTab('paste')" id="batch-tab-paste" style="padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;background:var(--bg-body);color:var(--text-muted);border:none;border-radius:var(--radius-xs) var(--radius-xs) 0 0;margin-right:2px;">&#x1F4DD; 粘贴列表</button>
+        </div>
+
+        <!-- Tab 1: 范围生成 -->
+        <div class="batch-input-method" id="batch-method-range" style="display:block;">
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;background:var(--bg-body);padding:14px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);">
+                <div class="field-group"><label>机型</label><select id="bm_type">{% for mt in app_config.machine_types %}<option>{{mt.key}}</option>{% endfor %}</select></div>
+                <div class="field-group"><label>任务类型</label><select id="bm_kind">{% for tk in app_config.task_kinds %}<option>{{tk.key}}</option>{% endfor %}</select></div>
+                <div class="field-group"><label>分组</label><select id="bm_group">{% for mg in app_config.get('machine_groups', []) %}<option>{{mg.key}}</option>{% endfor %}<option value="" selected>未分组</option></select></div>
+                <div class="field-group" style="flex:1;min-width:160px;"><label>名称范围</label><input id="bm_range" placeholder="如 01-12 或 01,03,05" style="width:100%;"></div>
+                <button class="btn btn-primary" onclick="generateBatchFromRange()">生成列表</button>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">自动补全为 "机型-编号"，新行使用左侧设定的机型/任务类型/分组</p>
+        </div>
+
+        <!-- Tab 2: 粘贴列表 -->
+        <div class="batch-input-method" id="batch-method-paste" style="display:none;">
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;background:var(--bg-body);padding:10px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px;">
+                <div class="field-group"><label>默认机型</label><select id="bp_type">{% for mt in app_config.machine_types %}<option>{{mt.key}}</option>{% endfor %}</select></div>
+                <div class="field-group"><label>默认任务类型</label><select id="bp_kind">{% for tk in app_config.task_kinds %}<option>{{tk.key}}</option>{% endfor %}</select></div>
+                <div class="field-group"><label>默认分组</label><select id="bp_group">{% for mg in app_config.get('machine_groups', []) %}<option>{{mg.key}}</option>{% endfor %}<option value="" selected>未分组</option></select></div>
+                <span style="font-size:11px;color:var(--text-muted);padding-bottom:8px;">未指定字段用此默认值</span>
+            </div>
+            <textarea id="bp_textarea" style="width:100%;height:130px;font-family:monospace;font-size:12px;line-height:1.7;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);resize:vertical;background:var(--bg-card);color:var(--text-primary);" placeholder="每行一台机器，支持格式：&#10;BR1-01&#10;BR2-10(接管)&#10;Mini-03(移动, A组)&#10;BR1-05(A组)"></textarea>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">解析规则：<code>名称(任务类型)</code> · <code>名称(, 分组)</code> · <code>名称(任务类型, 分组)</code></div>
+            <button class="btn btn-primary" onclick="generateBatchFromPaste()" style="margin-top:8px;">解析并添加至列表</button>
+        </div>
+
+        <!-- 结果表格 -->
+        <div style="border-top:1px dashed var(--border);margin:16px 0;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-body);border-radius:var(--radius-xs);margin-bottom:6px;font-size:12px;">
+            <span>共 <b id="batch-row-count" style="color:var(--primary);">0</b> 台机器</span>
+            <span style="font-size:11px;color:var(--text-muted);">下拉框可逐台覆盖 · 黄底 = 不同于默认设定</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-body);">#</th><th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-body);">机器名</th><th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-body);">机型</th><th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-body);">任务类型</th><th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-body);">分组</th><th style="width:30px;"></th></tr>
+            </thead>
+            <tbody id="batch-machines-tbody"></tbody>
+        </table>
+        <div style="text-align:center;margin-top:10px;">
+            <button class="btn btn-sm" onclick="addBatchManualRow()" style="border:1px dashed var(--border);background:var(--bg-card);color:var(--text-primary);">+ 手动添加一行</button>
+        </div>
+
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 24px;border-top:1px solid var(--border);background:var(--bg-body);">
+        <button class="btn" onclick="closeBatchMachineDialog()">取消</button>
+        <button class="btn btn-primary" onclick="executeBatchAdd()">确认添加 <span id="batch-confirm-count">0</span> 台</button>
+    </div>
+</div>
+
+<!-- 导出列选择弹窗 -->
+<div id="export-columns-dialog" class="confirm-overlay" style="display:none;">
+    <div class="confirm-box" style="max-width:850px;">
+        <div class="confirm-header">
+            <span id="export-columns-title">选择导出列</span>
+            <button class="confirm-close" onclick="closeExportColumnsDialog()">×</button>
+        </div>
+        <div class="confirm-body" style="max-height:65vh;overflow:hidden;padding:0;">
+            <div style="display:flex;min-height:400px;">
+                <!-- 左侧：列池 -->
+                <div style="flex:6;padding:14px;border-right:1px solid var(--border);overflow-y:auto;max-height:65vh;">
+                    <input id="export-column-search" placeholder="🔍 搜索列名..." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;box-sizing:border-box;margin-bottom:10px;" oninput="_filterExportColumns()">
+                    <div style="margin-bottom:10px;display:flex;gap:8px;font-size:12px;">
+                        <span style="cursor:pointer;color:var(--primary);font-weight:500;" onclick="toggleAllExportColumns(true)">全选</span>
+                        <span style="cursor:pointer;color:var(--primary);font-weight:500;" onclick="toggleAllExportColumns(false)">取消全选</span>
+                        <span style="cursor:pointer;color:var(--primary);font-weight:500;" onclick="resetDefaultExportColumns()">恢复默认</span>
+                    </div>
+                    <div id="export-columns-left"></div>
+                </div>
+                <!-- 右侧：已选排序 -->
+                <div style="flex:4;padding:14px;background:var(--bg-body);overflow-y:auto;max-height:65vh;" id="export-columns-right-container">
+                    <div style="font-weight:600;font-size:13px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;">
+                        <span>✅ 已选列 · 拖拽排序</span>
+                        <span style="font-size:11px;color:var(--text-muted);" id="export-selected-count">0 列</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">拖拽 ⠿ 调整顺序，✕ 移除</div>
+                    <div id="export-columns-right"></div>
+                    <div id="export-columns-empty" style="padding:20px 12px;border-radius:6px;border:1.5px dashed var(--border);text-align:center;font-size:12px;color:var(--text-muted);">
+                        在左侧勾选列添加到此处
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="confirm-footer">
+            <button class="btn confirm-cancel" onclick="closeExportColumnsDialog()">取消</button>
+            <button class="btn confirm-ok" onclick="executeExport()">确认导出</button>
+        </div>
+    </div>
+</div>

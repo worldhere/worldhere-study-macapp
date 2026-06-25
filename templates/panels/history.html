@@ -1,0 +1,119 @@
+    <!-- ==================== 历史记录 ==================== -->
+    <div class="panel">
+        <div class="box">
+            <!-- Filter bar -->
+            <div class="filter-bar">
+                <span class="search-input-wrapper">
+                    <input type="text" id="history-search" class="search-input" placeholder="搜索任务名、机器名、类型..." oninput="filterHistoryTable()">
+                    <button class="search-clear" onclick="clearHistorySearch()">&times;</button>
+                </span>
+                <button class="filter-toggle" id="history-date-toggle" onclick="toggleHistoryDatePanel()">
+                    <span class="filter-arrow">&#x25B8;</span> 日期区间 <span id="history-date-badge" class="badge" style="display:none;"></span>
+                </button>
+                <b>机型：</b>
+                <div class="filter-dim" data-dim="type">
+                    <button class="filter-trigger" id="hist-filter-trigger-type" onclick="_genericToggleFilterPanel('hist-filter-panel-type')" type="button">全部 ▾</button>
+                    <div class="filter-panel" id="hist-filter-panel-type" data-ns="hist"></div>
+                </div>
+                <b>任务类型：</b>
+                <div class="filter-dim" data-dim="kind">
+                    <button class="filter-trigger" id="hist-filter-trigger-kind" onclick="_genericToggleFilterPanel('hist-filter-panel-kind')" type="button">全部 ▾</button>
+                    <div class="filter-panel" id="hist-filter-panel-kind" data-ns="hist"></div>
+                </div>
+                <button class="btn filter-reset-btn" id="hist-filter-reset-btn" onclick="resetHistFilters()" disabled type="button">↺ 重置</button>
+                <div class="mode-btn-group">
+                    <button class="mode-btn active" data-mode="simple" onclick="switchHistoryModeBtn('simple')">简易</button>
+                    <button class="mode-btn" data-mode="detail" onclick="switchHistoryModeBtn('detail')">详细</button>
+                </div>
+                <span id="history-batch-actions" style="display:none;white-space:nowrap;">
+                    <span id="batch-count" style="font-weight:600;">已选 0 条</span>
+                    <button class="btn" onclick="batchRecallHistory()">批量回收</button>
+                    <button class="btn-danger" onclick="batchDeleteHistory()">批量删除</button>
+                </span>
+                <label style="white-space:nowrap;flex-shrink:0;margin-left:auto;"><input type="checkbox" id="history-batch-mode" onchange="toggleHistoryBatchMode()"> 批量操作</label>
+                <button class="tool-btn export-btn" onclick="exportHistory()">导出Excel</button>
+                <button class="btn" onclick="openHistoryNameSync()" title="将历史记录中的类型名称更新为当前设置" style="background:var(--warning);">同步历史名称</button>
+            </div>
+
+            <!-- Date range panel -->
+            <div class="filter-drop-panel" id="history-date-panel">
+                <b>日期区间：</b>
+                <input id="history-date-from" type="date" value="{{history_date_from or ''}}" style="width:140px">
+                <span>→</span>
+                <input id="history-date-to" type="date" value="{{history_date_to or ''}}" style="width:140px">
+                <button onclick="document.getElementById('history-date-from').value='';document.getElementById('history-date-to').value='';filterHistory();">清除日期</button>
+                <span style="font-size:12px;color:var(--text-muted);">（不选日期则显示最近完成的在前）</span>
+            </div>
+
+            <!-- Filter condition tags -->
+            <div class="filter-conditions" id="hist-filter-conditions" style="display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border-light);margin-bottom:12px;">
+                <span style="font-size:11px;color:var(--text-muted);">条件：</span>
+                <span id="hist-filter-condition-tags" style="display:inline-flex;gap:4px;flex-wrap:wrap;"></span>
+            </div>
+
+            <script>
+            window._histFilterPanelData = {
+                type: [{% for mt in app_config.machine_types %}"{{mt.key}}"{% if not loop.last %},{% endif %}{% endfor %}],
+                kind: [{% for tk in app_config.task_kinds %}"{{tk.key}}"{% if not loop.last %},{% endif %}{% endfor %}]
+            };
+            </script>
+
+            <!-- Pagination bar -->
+            <div id="history-pagination-bar" class="pagination-bar" style="margin-bottom:8px;"></div>
+
+            <!-- 简易模式表格 -->
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th class="hist-batch-col" style="display:none;"><input type="checkbox" id="hist-check-all" onchange="toggleHistSelectAll()"></th>
+                        <th class="seq-col">#</th>
+                        <th class="sortable" data-sort="name">任务 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="machine">机器 <span class="sort-indicator"></span></th>
+                        <th>完成时间段</th>
+                        <th class="sortable" data-sort="kind">任务类型 <span class="sort-indicator"></span></th>
+                        <th>备注</th>
+                        <th>维修时长</th>
+                        <th id="hist-op-header">操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <!-- 详细模式表格 -->
+            <div id="history-table-detail-wrapper" style="display:none;overflow-x:auto;">
+            <table id="history-table-detail" style="display:none;">
+                <thead>
+                    <tr>
+                        <th class="hist-batch-col" style="display:none;"><input type="checkbox" id="hist-check-all-detail" onchange="toggleHistSelectAll()"></th>
+                        <th class="seq-col">#</th>
+                        <th class="sortable" data-sort="name">任务 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="machine">机器 <span class="sort-indicator"></span></th>
+                        <th>完成时间段</th>
+                        <th class="sortable" data-sort="kind">任务类型 <span class="sort-indicator"></span></th>
+                        <th>备注</th>
+                        <th>维修时长</th>
+                        <th>RBP任务ID</th>
+                        <th>场景</th>
+                        <th>通用类别</th>
+                        <th>来源链接</th>
+                        <th>预期采集量</th>
+                        <th>数采需求ID</th>
+                        <th>数采需求类型</th>
+                        <th>维修时间段</th>
+                        <th id="hist-op-header-detail">操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+
+            <!-- ==================== 已完成任务包 ==================== -->
+            <div id="history-packages-section" style="margin-top:16px;">
+                <h3>📦 已完成任务包</h3>
+                <div id="history-packages-grid" class="pkg-grid">
+                    加载中...
+                </div>
+            </div>
+
+        </div>
+    </div>

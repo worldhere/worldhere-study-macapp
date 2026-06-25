@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>任务排班可视化系统</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/auto-assign.css?v=20260526b">
+</head>
+<body>
+<canvas id="particle-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none;"></canvas>
+<canvas id="ribbons-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none;"></canvas>
+<canvas id="butterfly-fly-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;display:none;"></canvas>
+<canvas id="butterfly-rest-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none;display:none;"></canvas>
+
+<!-- ========== 侧边栏导航 ========== -->
+<aside class="sidebar">
+    <!-- 品牌区 -->
+    <div class="sidebar-brand">
+        <div class="sidebar-brand-icon">&#128197;</div>
+        <div class="sidebar-brand-text">
+            <div class="sidebar-brand-title">排班系统</div>
+            <div class="sidebar-brand-sub">Task Scheduler</div>
+        </div>
+    </div>
+
+    <!-- 时钟 -->
+    <div class="sidebar-clock" id="sidebar-clock-card">
+        <div class="sidebar-clock-label">当前时间</div>
+        <div class="sidebar-clock-time" id="sidebar-clock-time">00:00:00</div>
+    </div>
+
+    <!-- 折叠态竖排时钟（展开时隐藏） -->
+    <div class="sidebar-collapsed-clock" id="sidebar-collapsed-clock-el" style="display:none;">00:00</div>
+
+    <!-- 排班日期 -->
+    <div class="sidebar-toolbar-card" id="sidebar-date-card">
+        <div class="sidebar-card-label">排班日期</div>
+        <input id="sidebar-schedule-date" type="date" value="{{selected_date}}" onchange="syncSidebarDate()">
+    </div>
+
+    <!-- 一键快速操作 -->
+    <div class="sidebar-toolbar-card" id="sidebar-quickops-card">
+        <button class="sidebar-btn sidebar-btn-danger" onclick="openQuickOpsDialog()">&#9889; 一键快速操作</button>
+    </div>
+
+    <!-- 导出 Excel -->
+    <div class="sidebar-toolbar-card" id="sidebar-export-card">
+        <div class="sidebar-card-label">导出 Excel</div>
+        <div class="sidebar-export-row"><span>从</span><input id="sidebar-export-from" type="date" placeholder="不选=全部"></div>
+        <div class="sidebar-export-row"><span>到</span><input id="sidebar-export-to" type="date" placeholder="不选=全部"></div>
+        <button class="sidebar-btn sidebar-btn-export" onclick="sidebarExport()">&#128230; 导出 Excel</button>
+    </div>
+
+    <!-- 主菜单导航 -->
+    <nav class="sidebar-nav">
+        <div class="nav-label">主菜单</div>
+        <!-- 由 rebuildNavUI() 动态填充 -->
+    </nav>
+
+    <!-- 底部操作区 -->
+    <div class="sidebar-footer">
+        <div class="sidebar-footer-db" title="{{db_path}}">{{db_path}}</div>
+        <div class="sidebar-footer-actions">
+            <button id="theme-toggle-sidebar" onclick="toggleTheme()" title="切换主题">&#9789;</button>
+            <!-- <button id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="折叠侧边栏">&#9664;</button> -->
+            <button onclick="toggleLayoutMode()" title="切换到顶部导航模式">&#8646;</button>
+        </div>
+    </div>
+</aside>
+
+<!-- ========== 顶部导航 (V2) ========== -->
+<header class="app-header">
+    <div class="app-header-left">
+        <div class="app-logo">&#9776;</div>
+        <span class="app-title">任务排班可视化系统</span>
+    </div>
+    <div class="app-header-right">
+        <button class="theme-toggle-btn" id="theme-toggle-header" onclick="toggleTheme()" title="切换亮色/暗色主题">&#9789;</button>
+        <button class="layout-toggle-btn" onclick="toggleLayoutMode()" title="切换到侧边栏模式">&#8596;</button>
+        <div class="header-clock">&#9200; <span class="time-val" id="current-time-display">2024-01-01 00:00:00</span></div>
+        <div class="header-db" title="{{db_path}}">数据文件：{{db_path}}</div>
+    </div>
+</header>
+
+<div class="app-toolbar">
+    <b>日期：</b><input id="schedule-date" type="date" value="{{selected_date}}" onchange="changeDate()">
+    <button class="tool-btn clear-btn" onclick="openQuickOpsDialog()">一键快速操作</button>
+    <span style="margin-left:4px;">导出：从 <input id="export-date-from" type="date" style="width:140px" placeholder="不选=全部"> 到 <input id="export-date-to" type="date" style="width:140px" placeholder="不选=全部"></span>
+    <button class="tool-btn export-btn" onclick="exportSchedule()">导出Excel</button>
+</div>
+
+<div class="tab">
+    <button class="tab-btn" onclick="switchTab(0)">班次设置</button>
+    <button class="tab-btn" onclick="switchTab(1)">机器管理</button>
+    <button class="tab-btn" onclick="switchTab(2)">任务库</button>
+    <button class="tab-btn active" onclick="switchTab(3)">排班面板</button>
+    <button class="tab-btn" onclick="switchTab(4)">历史记录</button>
+    <button class="tab-btn" onclick="switchTab(5)">可视化总结</button>
+    <button class="tab-btn" onclick="switchTab(6)">设置</button>
+</div>
+
+<main class="app-content">
+
+{% include 'panels/shifts.html' %}
+
+{% include 'panels/machines.html' %}
+
+{% include 'panels/tasks.html' %}
+
+{% include 'panels/schedule.html' %}
+
+{% include 'panels/schedule-split.html' %}
+
+{% include 'panels/history.html' %}
+
+{% include 'panels/summary.html' %}
+
+{% include 'panels/settings.html' %}
+</main>
+
+{% include 'dialogs/all.html' %}
+{% include 'dialogs/auto_assign.html' %}
+
+<!-- 悬浮提示框 -->
+<div id="tooltip" class="tooltip" style="display:none;"></div>
+<!-- Toast 轻提示容器 -->
+<div id="toast-container" class="toast-container"></div>
+
+<script>
+    const SELECTED_DATE = "{{selected_date}}";
+    var schedules = [];
+    var SCHEDULES_HISTORY = [];
+    const SHIFT = {{ shift | tojson }};
+    const APP_CONFIG = {{ app_config | tojson }};
+    var TYPE_INDEX_MAP = {};
+    (function() {
+        var types = APP_CONFIG.machine_types || [];
+        for (var i = 0; i < types.length; i++) {
+            TYPE_INDEX_MAP[types[i].key] = i;
+        }
+    })();
+</script>
+<script src="/static/lib/chart.umd.min.js"></script>
+<script src="/static/lib/coordinate-system.js"></script>
+<script src="/static/core.js"></script>
+<script src="/static/lib/filter-system.js"></script>
+<script src="/static/feishu-sync.js"></script>
+<script src="/static/particles.js"></script>
+<script src="/static/ribbons.js"></script>
+<script src="/static/butterflies.js"></script>
+<script src="/static/task-status.js"></script>
+<script src="/static/task-pool.js"></script>
+<script src="/static/task-table.js"></script>
+<script src="/static/task-edit.js"></script>
+<script src="/static/tasks.js"></script>
+<script src="/static/machines.js"></script>
+<script src="/static/history.js"></script>
+<script src="/static/summary.js"></script>
+<script src="/static/import-export.js"></script>
+<script src="/static/dialogs.js"></script>
+<script src="/static/auto-assign.js"></script>
+<script src="/static/timeline-render.js"></script>
+<script src="/static/timeline-drag.js"></script>
+<script src="/static/timeline-ops.js"></script>
+<script src="/static/timeline.js"></script>
+<script src="/static/timeline-split.js"></script>
+<script src="/static/settings.js"></script>
+<script src="/static/save-system.js"></script>
+<script src="/static/colors.js"></script>
+<script src="/static/app.js"></script>
+<script src="{{ url_for('static', filename='shift-posts.js') }}"></script>
+<script src="{{ url_for('static', filename='html2canvas.min.js') }}"></script>
+<script src="{{ url_for('static', filename='jspdf.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='export-image.js') }}"></script>
+
+{% if version_mismatch %}
+<script>
+(function() {
+    var serverMtime = {{ current_app_mtime|tojson }};
+    var storedMtime = localStorage.getItem('last_seen_app_mtime');
+    if (String(serverMtime) !== storedMtime) {
+        document.addEventListener('DOMContentLoaded', function() {
+            showToast('检测到程序更新。读档旧存档时将自动适配数据库结构。');
+        });
+        localStorage.setItem('last_seen_app_mtime', String(serverMtime));
+    }
+})();
+</script>
+{% endif %}
+</body>
+</html>

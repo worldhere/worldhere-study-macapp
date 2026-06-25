@@ -1,0 +1,130 @@
+    <!-- ==================== 机器管理 ==================== -->
+    <div class="panel">
+        <!-- 1. 新增机器（折叠模块） -->
+        <div class="box collapsible-box" id="add-machine-box">
+            <div class="collapsible-header" onclick="toggleCollapsible('add-machine-box')">
+                <span class="collapse-arrow" id="add-machine-arrow">&#x25BC;</span>
+                <h3>新增机器</h3>
+                <span style="font-size:11px;color:var(--text-muted);">— 名称、机型、任务类型、分组</span>
+            </div>
+            <div class="collapsible-body" id="add-machine-body">
+                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                    名称：<input id="m_name">
+                    机型：<select id="m_type" onchange="onMachineTypeChange()">{% for mt in app_config.machine_types %}<option>{{mt.key}}</option>{% endfor %}</select>
+                    任务类型：<select id="m_kind">{% for tk in app_config.task_kinds %}<option>{{tk.key}}</option>{% endfor %}</select>
+                    分组：<select id="m_group">{% for mg in app_config.get('machine_groups', []) %}<option>{{mg.key}}</option>{% endfor %}<option value="" selected>未分组</option></select>
+                    <button class="btn" onclick="addMachine()">新增</button>
+                    <button class="btn" onclick="openBatchMachineDialog()">批量添加</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 分组管理（折叠模块） -->
+        <div class="box collapsible-box" id="group-manage-box">
+            <div class="collapsible-header" onclick="toggleCollapsible('group-manage-box')">
+                <span class="collapse-arrow" id="group-manage-arrow">&#x25BC;</span>
+                <h3>&#x1F4C2; 分组管理</h3>
+                <span id="group-count-badge" style="background:var(--warning);color:#fff;font-size:11px;padding:1px 8px;border-radius:10px;">{{ app_config.get('machine_groups', [])|length }}</span>
+                <span style="font-size:11px;color:var(--text-muted);">— 拖拽排序，双击名称编辑</span>
+            </div>
+            <div class="collapsible-body" id="group-manage-body">
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+                    <input id="new-group-name" placeholder="输入新分组名称" style="width:160px;">
+                    <button class="btn" onclick="addMachineGroup()">新建分组</button>
+                </div>
+                <div id="group-tags-container" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    {% for mg in app_config.get('machine_groups', []) %}
+                    <span class="group-tag" draggable="true" data-group-name="{{mg.key}}" ondragstart="handleGroupDragStart(event)" ondragover="handleGroupDragOver(event)" ondragend="handleGroupDragEnd(event)" ondblclick="editGroupName(this)" style="display:inline-flex;align-items:center;gap:4px;background:var(--primary-light);color:var(--primary);padding:4px 12px;border-radius:4px;font-size:12px;cursor:grab;user-select:none;">⋮⋮ {{mg.key}} <span onclick="deleteMachineGroup(this)" style="cursor:pointer;margin-left:2px;">✕</span></span>
+                    {% endfor %}
+                </div>
+                <div id="group-empty-hint" style="display:{{'none' if app_config.get('machine_groups', []) else 'block'}};color:var(--text-muted);font-size:12px;margin-top:8px;">暂无分组，在上方输入框中创建第一个分组</div>
+            </div>
+        </div>
+
+        <!-- 3. 筛选栏 + 机器表格 -->
+        <div class="box">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;" id="filter-bar-row">
+                    <b>筛选机型：</b>
+                    <div class="filter-dim" data-dim="type">
+                        <button class="filter-trigger" id="filter-trigger-type" onclick="toggleFilterPanel('type')" type="button">全部 ▾</button>
+                        <div class="filter-panel" id="filter-panel-type"></div>
+                    </div>
+                    <b>状态：</b>
+                    <div class="filter-dim" data-dim="status">
+                        <button class="filter-trigger" id="filter-trigger-status" onclick="toggleFilterPanel('status')" type="button">全部 ▾</button>
+                        <div class="filter-panel" id="filter-panel-status"></div>
+                    </div>
+                    <b>任务类型：</b>
+                    <div class="filter-dim" data-dim="kind">
+                        <button class="filter-trigger" id="filter-trigger-kind" onclick="toggleFilterPanel('kind')" type="button">全部 ▾</button>
+                        <div class="filter-panel" id="filter-panel-kind"></div>
+                    </div>
+                    <b>分组：</b>
+                    <div class="filter-dim" data-dim="group">
+                        <button class="filter-trigger" id="filter-trigger-group" onclick="toggleFilterPanel('group')" type="button">全部 ▾</button>
+                        <div class="filter-panel" id="filter-panel-group"></div>
+                    </div>
+                </div>
+                <button class="btn filter-reset-btn" id="filter-reset-btn" onclick="resetAllFilters()" disabled type="button">↺ 重置</button>
+            </div>
+            <div class="filter-conditions" id="filter-conditions" style="display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border-light);margin-bottom:12px;">
+                <span style="font-size:11px;color:var(--text-muted);">条件：</span>
+                <span id="filter-condition-tags" style="display:inline-flex;gap:4px;flex-wrap:wrap;"></span>
+            </div>
+            <!-- 隐藏的旧 select，仅用于 URL 参数初始化 -->
+            <div style="display:none;">
+                <select id="machine-filter">{% for mt in app_config.machine_types %}<option value="{{mt.key}}">{{mt.key}}</option>{% endfor %}</select>
+                <select id="machine-status-filter"><option value="空闲">空闲</option><option value="工作">工作</option><option value="维修停用">维修停用</option></select>
+                <select id="machine-kind-filter">{% for tk in app_config.task_kinds %}<option value="{{tk.key}}">{{tk.key}}</option>{% endfor %}</select>
+                <select id="machine-group-filter">{% for mg in app_config.get('machine_groups', []) %}<option value="{{mg.key}}">{{mg.key}}</option>{% endfor %}<option value="未分组">未分组</option></select>
+            </div>
+            <script>
+            window._filterPanelData = {
+                type: [{% for mt in app_config.machine_types %}"{{mt.key}}"{% if not loop.last %},{% endif %}{% endfor %}],
+                status: ["空闲","工作","维修停用"],
+                kind: [{% for tk in app_config.task_kinds %}"{{tk.key}}"{% if not loop.last %},{% endif %}{% endfor %}],
+                group: [{% for mg in app_config.get('machine_groups', []) %}"{{mg.key}}"{% if not loop.last %},{% endif %}{% endfor %}{% if app_config.get('machine_groups', [])|length > 0 %},{% endif %}"未分组"]
+            };
+            </script>
+            <table id="machine-list-table">
+                <tr>
+                    <th><a href="?date={{selected_date}}&m_type={{m_type}}&m_sort=type&m_dir={{'desc' if m_sort=='type' and m_dir=='asc' else 'asc'}}">机型{% if m_sort=='type' %}({{m_dir}}){% endif %}</a></th>
+                    <th><a href="?date={{selected_date}}&m_type={{m_type}}&m_sort=name&m_dir={{'desc' if m_sort=='name' and m_dir=='asc' else 'asc'}}">名称{% if m_sort=='name' %}({{m_dir}}){% endif %}</a></th>
+                    <th><a href="?date={{selected_date}}&m_type={{m_type}}&m_sort=status&m_dir={{'desc' if m_sort=='status' and m_dir=='asc' else 'asc'}}">状态{% if m_sort=='status' %}({{m_dir}}){% endif %}</a></th>
+                    <th><a href="?date={{selected_date}}&m_type={{m_type}}&m_sort=task_kind&m_dir={{'desc' if m_sort=='task_kind' and m_dir=='asc' else 'asc'}}">任务类型{% if m_sort=='task_kind' %}({{m_dir}}){% endif %}</a></th>
+                    <th>分组</th>
+                    <th style="text-align:center;width:40px">&#x1F441;</th>
+                    <th>操作</th>
+                </tr>
+            </table>
+            <!-- 已隐藏机器表格模块 -->
+            <div id="hidden-machines-module" class="table-module" style="display:none;margin-top:16px;">
+                <div class="table-module-header" onclick="toggleHiddenMachinesSection()" style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#f8fafc;border:1px solid var(--border);border-radius:8px 8px 0 0;cursor:pointer;user-select:none;">
+                    <span style="font-size:14px;font-weight:600;">&#x1F441;&#x200D;&#x1F5E8; 已隐藏的机器</span>
+                    <span id="hidden-machines-count" style="background:#e5e7eb;color:#6b7280;font-size:12px;padding:2px 8px;border-radius:10px;">0</span>
+                    <span style="font-size:12px;color:#9ca3af;">— 不在时间轴上显示，但任务仍在进行</span>
+                    <span class="collapse-arrow" style="margin-left:auto;font-size:12px;color:#9ca3af;">&#x25B4;</span>
+                </div>
+                <div class="table-module-body" style="border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>机型</th>
+                                <th>名称</th>
+                                <th>状态</th>
+                                <th>任务类型</th>
+                                <th>分组</th>
+                                <th style="text-align:center;width:40px">&#x1F441;</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hidden-machines-tbody"></tbody>
+                    </table>
+                    <div style="text-align:right;padding:8px 12px;border-top:1px solid var(--border-light);">
+                        <button id="hidden-restore-all-btn" onclick="restoreAllHiddenMachines()" style="font-size:12px;padding:4px 12px;">全部恢复显示</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,195 @@
+    <!-- ==================== 任务库 ==================== -->
+    <div class="panel">
+        <details class="box" open>
+            <summary style="cursor:pointer;font-weight:600;color:var(--text-primary);margin-bottom:8px;">新增任务（可收缩）</summary>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;">
+                任务名：<input id="t_name">
+                机型：<select id="t_type">{% for mt in app_config.machine_types %}<option>{{mt.key}}</option>{% endfor %}</select>
+                任务类型：<select id="t_kind">{% for tk in app_config.task_kinds %}<option>{{tk.key}}</option>{% endfor %}</select>
+                优先级：<select id="t_pri">{% for p in app_config.priorities %}<option>{{p.key}}</option>{% endfor %}</select>
+                难度：<select id="t_diff">{% for d in app_config.difficulties %}<option value="{{'' if d.key=='无' else d.key}}">{{d.key}}</option>{% endfor %}</select>
+                备注：<input id="t_remark" style="width:180px" placeholder="备注信息">
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;">
+                预估时长：
+                <label><input type="radio" name="t_est_mode" value="blank" checked onchange="toggleEstMode()">不填</label>
+                <label><input type="radio" name="t_est_mode" value="direct" onchange="toggleEstMode()">直接预估</label>
+                <label><input type="radio" name="t_est_mode" value="calc" onchange="toggleEstMode()">计算预估</label>
+                <span id="est-direct" style="display:none;">
+                    时长：<input id="t_duration" placeholder="如 2h / 90min" style="width:120px">
+                </span>
+                <span id="est-calc" style="display:none;">
+                    操作(秒)：<input id="t_op" style="width:70px">
+                    复位(秒)：<input id="t_reset" style="width:70px">
+                    条数：
+                    <select id="t_count_quick" onchange="applyCountQuick()">
+                        <option value="">快捷</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                        <option value="300">300</option>
+                        <option value="500">500</option>
+                        <option value="1000">1000</option>
+                    </select>
+                    自定义：<input id="t_count" style="width:80px" placeholder="如 350" oninput="syncCountToExpcnt('t_count','t_expcnt')">
+                    冗余(分钟)：<input id="t_red" style="width:80px" value="0">
+                    <button onclick="previewCalc()">计算</button>
+                    <span id="calc-preview" style="color:#666;font-size:12px;"></span>
+                </span>
+                <button class="btn" onclick="addTask()">新增</button>
+            </div>
+            <details style="margin-top:8px;">
+                <summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">详细字段（可选填）</summary>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;">
+                    RBP任务ID：<input id="t_rbp_id" style="width:100px">
+                    场景：<input id="t_scene" style="width:100px">
+                    通用类别：<input id="t_gcat" style="width:100px">
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;">
+                    来源链接：<input id="t_slink" style="width:220px" placeholder="http://...">
+                    预期采集量：<input id="t_expcnt" style="width:80px" type="number" oninput="syncCountToExpcnt('t_expcnt','t_count')">
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;">
+                    数采需求ID：<input id="t_creqid" style="width:120px">
+                    数采需求类型：<input id="t_creqtype" style="width:120px">
+                </div>
+            </details>
+        </details>
+
+        <div class="box">
+            <!-- Filter bar -->
+            <div class="filter-bar">
+                <span class="search-input-wrapper">
+                    <input type="text" id="task-search" class="search-input" placeholder="搜索任务名、机型、类型..." oninput="applyTaskFilters()">
+                    <button class="search-clear" onclick="clearTaskSearch()">&times;</button>
+                </span>
+                <b>机型：</b>
+                <div class="filter-dim" data-dim="type">
+                    <button class="filter-trigger" id="task-filter-trigger-type" onclick="_genericToggleFilterPanel('task-filter-panel-type')" type="button">全部 ▾</button>
+                    <div class="filter-panel" id="task-filter-panel-type" data-ns="task"></div>
+                </div>
+                <b>任务类型：</b>
+                <div class="filter-dim" data-dim="kind">
+                    <button class="filter-trigger" id="task-filter-trigger-kind" onclick="_genericToggleFilterPanel('task-filter-panel-kind')" type="button">全部 ▾</button>
+                    <div class="filter-panel" id="task-filter-panel-kind" data-ns="task"></div>
+                </div>
+                <b>状态：</b>
+                <div class="filter-dim" data-dim="status">
+                    <button class="filter-trigger" id="task-filter-trigger-status" onclick="_genericToggleFilterPanel('task-filter-panel-status')" type="button">全部 ▾</button>
+                    <div class="filter-panel" id="task-filter-panel-status" data-ns="task"></div>
+                </div>
+                <button class="btn filter-reset-btn" id="task-filter-reset-btn" onclick="resetTaskFilters()" disabled type="button">↺ 重置</button>
+                <div class="mode-btn-group" id="task-mode-btns">
+                    <button class="mode-btn active" data-mode="simple" onclick="switchTaskModeBtn('simple')">简易</button>
+                    <button class="mode-btn" data-mode="detail" onclick="switchTaskModeBtn('detail')">详细</button>
+                </div>
+                <span id="task-batch-actions" style="display:none;white-space:nowrap;">
+                    <button class="btn" onclick="batchAction('recycle')">批量回收</button>
+                    <button onclick="batchAction('complete')">批量完成</button>
+                    <button class="btn-danger" onclick="batchAction('delete')">批量删除</button>
+                    <span id="task-batch-count" style="font-weight:600;">已选 0 项</span>
+                </span>
+                <span style="font-size:12px;margin-left:8px;">显示时长：</span>
+                <select id="duration-unit" onchange="toggleDurationUnit()" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+                    <option value="min">分钟</option>
+                    <option value="sec">秒</option>
+                    <option value="hour">小时</option>
+                </select>
+                <label style="white-space:nowrap;flex-shrink:0;"><input type="checkbox" id="show-action-col" checked onchange="applyTaskFilters()"> 显示操作列</label>
+                <label style="white-space:nowrap;flex-shrink:0;margin-left:auto;"><input type="checkbox" id="task-batch-mode" onchange="toggleTaskBatchMode()"> 批量操作</label>
+                <button class="btn" style="background:var(--warning);" onclick="document.getElementById('import-file-input').click()">导入Excel</button>
+                <input id="import-file-input" type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(this)">
+            </div>
+
+            <!-- Filter condition tags -->
+            <div class="filter-conditions" id="task-filter-conditions" style="display:none;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border-light);margin-bottom:12px;">
+                <span style="font-size:11px;color:var(--text-muted);">条件：</span>
+                <span id="task-filter-condition-tags" style="display:inline-flex;gap:4px;flex-wrap:wrap;"></span>
+            </div>
+
+            <script>
+            window._taskFilterPanelData = {
+                type: [{% for mt in app_config.machine_types %}"{{mt.key}}"{% if not loop.last %},{% endif %}{% endfor %}],
+                kind: [{% for tk in app_config.task_kinds %}"{{tk.key}}"{% if not loop.last %},{% endif %}{% endfor %}],
+                status: ["待分配","已分配","采集中","采集即将完成","暂停中","暂停即将超时","过时待确认"]
+            };
+            </script>
+
+            <!-- Pagination bar -->
+            <div id="task-pagination-bar" class="pagination-bar" style="margin-bottom:8px;"></div>
+
+            <table id="task-table">
+                <thead>
+                    <tr>
+                        <th class="batch-col" style="display:none;"><input type="checkbox" id="batch-check-all" onchange="toggleSelectAll()"></th>
+                        <th class="seq-col">#</th>
+                        <th class="sortable" data-sort="name">任务名 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="type">机型 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="kind">任务类型 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="pri">优先级 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="diff">难度 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="dur"><span id="dur-header-label">预估时长(分钟)</span> <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="status">状态 <span class="sort-indicator"></span></th>
+                        <th>分配时段</th>
+                        <th class="action-col">操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <!-- 详细模式表格 -->
+            <div id="task-table-detail-wrapper" style="display:none;overflow-x:auto;">
+            <table id="task-table-detail" style="display:none;">
+                <thead>
+                    <tr>
+                        <th class="batch-col" style="display:none;"><input type="checkbox" id="detail-batch-check-all" onchange="toggleSelectAll()"></th>
+                        <th class="seq-col">#</th>
+                        <th class="sortable" data-sort="name">任务名 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="type">机型 <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="pri">优先级 <span class="sort-indicator"></span></th>
+                        <th>RBP数采任务ID</th>
+                        <th class="sortable" data-sort="status">任务状态 <span class="sort-indicator"></span></th>
+                        <th>任务场景</th>
+                        <th class="sortable" data-sort="kind">任务类型 <span class="sort-indicator"></span></th>
+                        <th>通用任务类别</th>
+                        <th>任务来源链接</th>
+                        <th>预期采集量/条</th>
+                        <th>数采需求ID</th>
+                        <th>数采需求类型</th>
+                        <th class="action-col">操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            </div>
+
+            <!-- ==================== 任务包模块 ==================== -->
+            <div class="box" id="task-packages-section" style="margin-top:16px;">
+                <h3>任务包</h3>
+                <div class="filter-bar" style="margin-bottom:8px;">
+                    <button class="btn" style="background:var(--warning);" onclick="openCreatePackageDialog()">+ 新建空包</button>
+                    <button class="btn" style="background:var(--warning);" onclick="document.getElementById('pkg-import-file-input').click()">导入 Excel</button>
+                    <input id="pkg-import-file-input" type="file" accept=".xlsx,.xls" style="display:none;" onchange="handlePackageImportFile(this)">
+                </div>
+                <div id="task-packages-grid" class="pkg-grid">
+                    加载中...
+                </div>
+            </div>
+
+            <details class="box" style="margin-top:16px;" id="deletion-log-panel">
+                <summary style="cursor:pointer;font-weight:600;color:var(--danger);" onclick="loadDeletionLog()">
+                    删除记录（可恢复）
+                </summary>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px;margin-bottom:6px;">
+                    <label><input type="checkbox" id="deletion-batch-mode" onchange="toggleDeletionBatchMode()"> 批量操作</label>
+                    <span id="deletion-batch-actions" style="display:none;">
+                        <button class="btn" onclick="batchRestoreDeletion()">批量恢复</button>
+                        <button class="btn-danger" onclick="batchPermanentDeleteDeletion()">批量永久删除</button>
+                        <span id="deletion-batch-count" style="font-weight:600;">已选 0 项</span>
+                    </span>
+                </div>
+                <table id="deletion-log-table" style="margin-top:6px;">
+                    <!-- 表头和数据行由 loadDeletionLog() 动态渲染 -->
+                </table>
+            </details>
+        </div>
+    </div>

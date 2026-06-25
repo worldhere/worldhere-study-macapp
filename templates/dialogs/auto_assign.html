@@ -1,0 +1,168 @@
+<div id="auto-assign-dialog" class="dialog-transparent">
+    <!-- 左面板：自动分配 -->
+    <div class="aa-left">
+        <div class="aa-header">
+            <h3>自动分配任务</h3>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span class="aa-hint">默认值已就绪，可直接预览</span>
+                <button class="aa-btn-pkg-toggle" id="aa-btn-pkg-toggle" onclick="AA.toggleConstraintPanel()">📦 分组-任务包约束</button>
+            </div>
+        </div>
+        <div class="aa-body">
+
+            <!-- 时间范围 -->
+            <div class="aa-group" data-group="time">
+                <div class="aa-group-head" onclick="AA.toggleGroup('time')">
+                    <span class="aa-arr" id="aa-arr-time">&#9656;</span>
+                    <span class="aa-label">时间范围</span>
+                    <span class="aa-summary muted" id="aa-summary-time">从现在开始 · 不限制结束</span>
+                </div>
+                <div class="aa-group-body" id="aa-body-time">
+                    <div class="aa-time-row">
+                        <span class="aa-time-label">从</span>
+                        <span class="aa-time-side">
+                            <select id="aa-from-mode" onchange="AA.onTimeModeChange()">
+                                <option value="now" selected>现在</option>
+                                <option value="custom">指定时间</option>
+                            </select>
+                            <span id="aa-from-pickers" style="display:none;">
+                                <input type="date" id="aa-from-date">
+                                <input type="time" id="aa-from-time">
+                            </span>
+                        </span>
+                        <span class="aa-time-sep">—</span>
+                        <span class="aa-time-label">到</span>
+                        <span class="aa-time-side">
+                            <select id="aa-to-mode" onchange="AA.onTimeModeChange()">
+                                <option value="unlimited" selected>不限制</option>
+                                <option value="custom">指定时间</option>
+                            </select>
+                            <span id="aa-to-pickers" style="display:none;">
+                                <input type="date" id="aa-to-date">
+                                <input type="time" id="aa-to-time">
+                            </span>
+                        </span>
+                        <span class="aa-time-link" onclick="AA.resetTime()">恢复默认</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 机器 -->
+            <div class="aa-group" data-group="machine">
+                <div class="aa-group-head" onclick="AA.toggleGroup('machine')">
+                    <span class="aa-arr open" id="aa-arr-machine">&#9666;</span>
+                    <span class="aa-label">机器</span>
+                    <span class="aa-summary" id="aa-summary-machine">已选 0 台</span>
+                </div>
+                <div class="aa-group-body open" id="aa-body-machine">
+                    <div class="aa-tabs" id="aa-machine-tabs"></div>
+                    <div class="aa-list" id="aa-machine-list">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 任务 -->
+            <div class="aa-group" data-group="task">
+                <div class="aa-group-head" onclick="AA.toggleGroup('task')">
+                    <span class="aa-arr open" id="aa-arr-task">&#9666;</span>
+                    <span class="aa-label">任务</span>
+                    <span class="aa-summary" id="aa-summary-task">0 个待分配</span>
+                </div>
+                <div class="aa-group-body open" id="aa-body-task">
+                    <div class="aa-tabs" id="aa-task-tabs"></div>
+                    <div class="aa-list" id="aa-task-list">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 高级 -->
+            <div class="aa-group" data-group="advanced">
+                <div class="aa-group-head" onclick="AA.toggleGroup('advanced')">
+                    <span class="aa-arr" id="aa-arr-advanced">&#9656;</span>
+                    <span class="aa-label">高级</span>
+                    <span class="aa-summary muted" id="aa-summary-advanced"></span>
+                </div>
+                <div class="aa-group-body" id="aa-body-advanced">
+                    <div class="aa-advanced">
+                        <div class="aa-adv-row">
+                            <div class="aa-adv-body">
+                                <div class="aa-adv-title">任务间隔</div>
+                                <div class="aa-adv-desc">任务之间预留的空闲分钟数，方便拖拽调整</div>
+                            </div>
+                            <input type="number" id="aa-gap" value="0" min="0" max="120" class="aa-adv-input" onchange="AA.saveAdvanced()">
+                            <span class="aa-adv-unit">分钟</span>
+                        </div>
+                        <div class="aa-adv-row">
+                            <div class="aa-adv-body">
+                                <div class="aa-adv-title">开始时间避开休息段</div>
+                                <div class="aa-adv-desc">开启：任务开始时间若落入休息段则推到休息段后</div>
+                            </div>
+                            <label class="aa-toggle">
+                                <input type="checkbox" id="aa-start-avoid-breaks" onchange="AA.saveAdvanced()">
+                                <span class="aa-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="aa-adv-row">
+                            <div class="aa-adv-body">
+                                <div class="aa-adv-title">结束时间避开休息段</div>
+                                <div class="aa-adv-desc">开启：任务不能在休息期间结束</div>
+                            </div>
+                            <label class="aa-toggle">
+                                <input type="checkbox" id="aa-end-avoid-breaks" onchange="AA.saveAdvanced()">
+                                <span class="aa-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="aa-adv-row">
+                            <div class="aa-adv-body">
+                                <div class="aa-adv-title">跨休息段自动延长时长</div>
+                                <div class="aa-adv-desc">开启：排班含休息段则自动加上 | 关闭：按原预估时长排</div>
+                            </div>
+                            <label class="aa-toggle">
+                                <input type="checkbox" id="aa-extend-breaks" checked onchange="AA.saveAdvanced()">
+                                <span class="aa-toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="aa-adv-row">
+                            <div class="aa-adv-body">
+                                <div class="aa-adv-title">排除时段</div>
+                                <div class="aa-adv-desc">手动指定的不可分配时间段</div>
+                            </div>
+                            <span class="aa-time-link" onclick="AA.addExclusion()">+ 添加</span>
+                        </div>
+                        <div id="aa-exclusion-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="aa-footer">
+            <span style="font-size:11px;color:var(--text-muted);" id="aa-adv-summary"></span>
+            <div style="display:flex;gap:6px;">
+                <button class="aa-btn cancel" onclick="AA.cancel()">取消</button>
+                <button class="aa-btn preview" id="aa-btn-preview" onclick="AA.preview()">预览分配</button>
+                <button class="aa-btn confirm" id="aa-btn-confirm" onclick="AA.confirm()">确认分配</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 左右分割线 -->
+    <div class="aa-divider" id="aa-divider"></div>
+
+    <!-- 右面板：分组-任务包约束 -->
+    <div class="aa-right" id="aa-right-panel" style="display:none;">
+        <div class="aa-right-head">
+            <h3>📦 分组 — 任务包约束</h3>
+            <button class="aa-right-close" onclick="AA.toggleConstraintPanel()">&times;</button>
+        </div>
+        <div class="aa-right-body" id="aa-constraint-body">
+            加载中...
+        </div>
+    </div>
+</div>
+
+<!-- 预览浮动操作栏 -->
+<div id="aa-preview-bar">
+    <span class="aa-preview-badge">预览中</span>
+    <span id="aa-preview-count">0 个任务待确认</span>
+    <span class="aa-preview-sep">|</span>
+    <span class="aa-preview-link" onclick="AA.returnToAdjust()">返回调整</span>
+    <span class="aa-preview-link aa-preview-confirm" onclick="AA.confirmFromBar()">确认分配</span>
+    <span class="aa-preview-link danger" onclick="AA.cancelPreview()">取消预览</span>
+</div>

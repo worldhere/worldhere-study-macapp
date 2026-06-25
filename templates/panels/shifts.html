@@ -1,0 +1,41 @@
+    <!-- ==================== 班次设置 ==================== -->
+    <div class="panel">
+        <div class="box">
+            <h3>白班设置</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                上班：<input id="day_start" value="{{shift.day_shift.start}}">
+                下班：<input id="day_end" value="{{shift.day_shift.end}}">
+                加班：<input id="day_over" value="{{shift.day_shift.overtime_raw}}" oninput="validateShiftFormat('day')">
+                休息段：<input id="day_breaks" style="width:220px" placeholder="如 12:00-12:30 或 12:00/30" value="{{shift.day_shift.breaks_raw or ''}}" oninput="validateShiftFormat('day')">
+                <button class="btn" onclick="saveShift('day')">保存</button>
+            </div>
+            <span id="day_warn" style="color:#e6a23c;font-size:11px;display:none;margin-top:4px;"></span>
+        </div>
+        <div class="box">
+            <h3>夜班设置</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                上班：<input id="night_start" value="{{shift.night_shift.start}}">
+                下班：<input id="night_end" value="{{shift.night_shift.end}}">
+                加班：<input id="night_over" value="{{shift.night_shift.overtime_raw}}" oninput="validateShiftFormat('night')">
+                休息段：<input id="night_breaks" style="width:220px" placeholder="如 00:30-00:50 或 00:30/20" value="{{shift.night_shift.breaks_raw or ''}}" oninput="validateShiftFormat('night')">
+                <button class="btn" onclick="saveShift('night')">保存</button>
+            </div>
+            <span id="night_warn" style="color:#e6a23c;font-size:11px;display:none;margin-top:4px;"></span>
+        </div>
+        <!-- 便签留言板 -->
+        <details class="box" id="shift-forum" style="margin-top:12px;display:none;">
+            <summary>留言板 · 便签</summary>
+            <div class="post-input-card">
+                <div class="post-input-row">
+                    <input id="post-title" placeholder="标题（选填）" maxlength="30">
+                    <button class="btn btn-clear" onclick="clearPostInput()" type="button">清空</button>
+                </div>
+                <textarea id="post-content" placeholder="正文...（支持换行）" rows="1" maxlength="2000"></textarea>
+                <div class="post-input-row post-input-footer">
+                    <input id="post-author" placeholder="署名（选填）" maxlength="20">
+                    <button class="btn" onclick="submitPost()">贴上去</button>
+                </div>
+            </div>
+            <div id="post-board"></div>
+        </details>
+    </div>

@@ -1,0 +1,72 @@
+<div class="panel" id="panel-summary">
+
+  <!-- ═══ 区域一：班次报告 ═══ -->
+  <div class="summary-section">
+    <div class="summary-section-header">
+      <h3>📊 班次报告</h3>
+      <span style="font-size:12px;color:var(--text-secondary);">查看单个班次的统计数据，确认后可手动发送到飞书</span>
+    </div>
+    <div class="summary-banner">
+      <div class="summary-banner-left">
+        <div class="summary-banner-controls">
+          <input type="date" id="summary-date" class="form-input" style="width:140px;" onchange="summaryLoadReport()">
+          <select id="summary-shift" class="form-input" style="width:100px;" onchange="summaryLoadReport()">
+            <option value="白班">白班</option>
+            <option value="夜班">夜班</option>
+          </select>
+        </div>
+        <div class="summary-banner-stats" id="summary-banner-stats" style="display:none;margin-top:8px;font-size:13px;color:var(--text-secondary);">
+          包进度 <strong id="stat-packages">0</strong> 个 | 完成率 <strong id="stat-pct">0</strong>% | 未完成 <strong id="stat-pending">0</strong> 项 | 采集总数 <strong id="stat-collect">0</strong>
+        </div>
+      </div>
+      <div class="summary-banner-right">
+        <button class="btn btn-primary" id="btn-send-report" onclick="summarySendReport()" disabled>📤 发送到飞书</button>
+        <div style="display:inline-flex;align-items:center;gap:8px;">
+          <div id="screenshot-style-group" style="display:inline-flex;gap:4px;background:#f0f1f3;padding:3px;border-radius:8px;">
+            <button id="style-tab-timeline" onclick="selectScreenshotStyle('timeline')" style="padding:5px 14px;font-size:13px;background:#fff;color:#333;border:none;border-radius:6px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.08);font-weight:500;">时间轴</button>
+            <button id="style-tab-table" onclick="selectScreenshotStyle('table')" style="padding:5px 14px;font-size:13px;background:transparent;color:#888;border:none;border-radius:6px;cursor:pointer;">表格</button>
+          </div>
+          <button class="btn" id="btn-send-screenshot" onclick="summarySendScreenshot()" disabled style="background:var(--warning);color:#fff;">📸 发送时间轴截图</button>
+        </div>
+        <span id="summary-sent-badge" style="display:none;font-size:12px;color:#10b981;">✅ 已发送</span>
+      </div>
+    </div>
+    <div class="summary-grid-report" id="summary-grid-report">
+      <!-- JS 动态填充 shift_report / machine_utilization -->
+    </div>
+  </div>
+
+  <!-- ═══ 区域二：可视化总结 ═══ -->
+  <div class="summary-section">
+    <div class="summary-section-header">
+      <h3>📈 可视化总结</h3>
+      <span style="font-size:12px;color:var(--text-secondary);">按时间范围查看趋势与统计数据</span>
+    </div>
+    <div class="summary-toolbar">
+      <label style="font-size:13px;margin-right:8px;">截止日期:</label>
+      <input type="date" id="summary-end-date" class="form-input" style="width:140px;">
+      <label style="font-size:13px;margin-left:12px;margin-right:8px;">回溯:</label>
+      <select id="summary-days" class="form-input" style="width:100px;" onchange="summaryRefreshTrends()">
+        <option value="2">近 2 天</option>
+        <option value="3">近 3 天</option>
+        <option value="7">近 7 天</option>
+        <option value="14" selected>近 14 天</option>
+        <option value="30">近 30 天</option>
+      </select>
+      <button class="btn btn-sm" onclick="summaryRefreshTrends()" style="margin-left:8px;">🔄 刷新</button>
+    </div>
+
+    <!-- ══ 聚合统计 ══ -->
+    <div class="summary-subsection-header">📊 聚合统计</div>
+    <div class="summary-grid" id="summary-grid">
+      <!-- JS 动态填充：daily_trend, completion_heatmap, weekday_load, machine_status, repair_summary, exception_summary, time_deviation, push_stats -->
+    </div>
+
+    <!-- ══ 任务明细 ══ -->
+    <div class="summary-subsection-header">📋 任务明细</div>
+    <div class="summary-grid-detail" id="summary-grid-detail">
+      <!-- JS 动态填充：estimate_vs_actual, overdue_tasks, cross_day_tasks -->
+    </div>
+  </div>
+
+</div>

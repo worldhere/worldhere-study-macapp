@@ -1,0 +1,93 @@
+<!-- ==================== 分班视图排班面板 ==================== -->
+<div id="panel-split-schedule" style="display:none;">
+    <div class="box">
+        <h3>分班视图排班</h3>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+            <button class="tool-btn" style="background:var(--primary);" onclick="AA.open()">自动分配任务</button>
+            <button class="tool-btn" style="background:var(--warning);" onclick="openMassDelayDialog()">批量延迟</button>
+            <button id="export-image-btn-split" class="tool-btn" style="background:var(--primary);" onclick="handleExportImage()">导出图片</button>
+            <button id="export-pdf-btn-split" class="tool-btn" style="background:var(--danger);" onclick="handleExportPDF()">导出PDF</button>
+        </div>
+        <div class="view-controls">
+            <label>视图：</label>
+            <select id="split-view-mode" onchange="splitApplyViewSettings()">
+                <option value="double">双班</option>
+                <option value="day">白班</option>
+                <option value="night">夜班</option>
+                <option value="custom-day">自定义（白班）</option>
+                <option value="custom-night">自定义（夜班）</option>
+            </select>
+            <span id="split-custom-range" style="display:none;">
+                <label>自定义：</label>
+                <input id="split-custom-start-date" type="date" style="width:130px" onchange="splitApplyViewSettings()">
+                <input id="split-custom-start-time" style="width:65px" placeholder="09:00" onchange="splitApplyViewSettings()">
+                <span>→</span>
+                <input id="split-custom-end-date" type="date" style="width:130px" onchange="splitApplyViewSettings()">
+                <input id="split-custom-end-time" style="width:65px" placeholder="18:30" onchange="splitApplyViewSettings()">
+            </span>
+            <label>列宽：</label>
+            <input id="split-zoom-hour" type="range" min="20" max="240" value="80" oninput="splitSetZoom()">
+            <label>行高：</label>
+            <input id="split-zoom-row" type="range" min="28" max="80" value="40" oninput="splitSetZoom()">
+            <span class="op-mode-bar">
+                <span style="font-size:12px;color:var(--text-muted);">操作：</span>
+                <span class="op-mode-selector">
+                    <button class="op-mode-btn active" data-mode="edit" onclick="setOpMode('edit')">修改</button>
+                    <button class="op-mode-btn" data-mode="recycle" onclick="setOpMode('recycle')">回收</button>
+                    <button class="op-mode-btn" data-mode="complete" onclick="setOpMode('complete')">完成</button>
+                    <button class="op-mode-btn" data-mode="cut" onclick="setOpMode('cut')">切割</button>
+                    <button class="op-mode-btn" data-mode="delete" onclick="setOpMode('delete')">删除</button>
+                </span>
+                <button class="undo-redo-btn" id="undo-btn" disabled onclick="undoLastAction()" title="撤回 (Ctrl+Z)">↩</button>
+                <button class="undo-redo-btn" id="redo-btn" disabled onclick="redoLastAction()" title="重做 (Ctrl+Y)">↪</button>
+            </span>
+            <label style="margin-left:8px;font-size:12px;"><input type="checkbox" id="split-snap-start-break" onchange="applyScheduleSetting('snap_start_to_break', this.checked?'1':'0');window._snapStartToBreak=this.checked;"> 开始时间避开休息段</label>
+            <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="split-snap-end-break" onchange="applyScheduleSetting('snap_end_to_break', this.checked?'1':'0');window._snapEndToBreak=this.checked;"> 结束时间避开休息段</label>
+            <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="split-show-marker" checked onchange="splitRenderCurrentMarker()"> 显示当前时间红线</label>
+            <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="split-sticky-col" onchange="splitToggleStickyCol()"> 置顶机器列</label>
+        </div>
+
+        <!-- 白班轴 -->
+        <div class="split-axis" id="split-axis-day">
+            <div class="split-axis-label">☀ 白班</div>
+            <div class="split-timeline-container" id="split-tc-day" onmousemove="showTimeTooltip(event)" onmouseout="hideTooltip()">
+                <div class="current-time-marker" id="split-marker-day"></div>
+                <div class="timeline-grid" id="split-header-date-day">
+                    <div class="machine-name-col"></div>
+                </div>
+                <div class="timeline-grid" id="split-header-hour-day">
+                    <div class="machine-name-col"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 夜班轴 -->
+        <div class="split-axis" id="split-axis-night" style="display:none;">
+            <div class="split-axis-label">🌙 夜班</div>
+            <div class="split-timeline-container" id="split-tc-night" onmousemove="showTimeTooltip(event)" onmouseout="hideTooltip()">
+                <div class="current-time-marker" id="split-marker-night"></div>
+                <div class="timeline-grid" id="split-header-date-night">
+                    <div class="machine-name-col"></div>
+                </div>
+                <div class="timeline-grid" id="split-header-hour-night">
+                    <div class="machine-name-col"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pool-mode-bar" style="display:flex;align-items:center;gap:6px;margin-top:12px;">
+            <span style="font-size:12px;color:var(--text-muted);">任务区：</span>
+            <button class="btn pool-mode-btn" data-mode="below" onclick="setTaskPoolMode('below')" style="font-size:11px;padding:4px 10px;">下方跟随</button>
+            <button class="btn pool-mode-btn" data-mode="fixed" onclick="setTaskPoolMode('fixed')" style="font-size:11px;padding:4px 10px;">底部固定</button>
+            <button class="btn pool-mode-btn" data-mode="floating" onclick="setTaskPoolMode('floating')" style="font-size:11px;padding:4px 10px;">浮动窗口</button>
+        </div>
+
+        <div class="task-pool" id="task-pool-split" ondrop="dropToPool(event)" ondragover="allowDrop(event)">
+            <h4>待分配任务（拖拽到时间轴即可分配）</h4>
+            <div id="pool-filter-bar-split" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+            </div>
+            <div id="pool-task-items-split"></div>
+            <span id="pool-page-controls-split" style="display:none;font-size:12px;gap:6px;align-items:center;margin-top:8px;"></span>
+        </div>
+    </div>
+</div>

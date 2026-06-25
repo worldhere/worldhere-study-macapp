@@ -1,0 +1,646 @@
+    <!-- ==================== 设置 ==================== -->
+    <div class="panel" id="panel-settings">
+        <div class="settings-subnav">
+            <button class="settings-tab active" onclick="switchSettingsSub(0)">班次设置</button>
+            <button class="settings-tab" onclick="switchSettingsSub(1)">机器管理设置</button>
+            <button class="settings-tab" onclick="switchSettingsSub(2)">任务库设置</button>
+            <button class="settings-tab" onclick="switchSettingsSub(3)">排班面板设置</button>
+            <button class="settings-tab" onclick="switchSettingsSub(4)">历史记录设置</button>
+            <button class="settings-tab" onclick="switchSettingsSub(5)">系统设置</button>
+            <button class="settings-tab" onclick="switchSettingsSub(6)">数据管理</button>
+            <button class="settings-tab" onclick="switchSettingsSub(7)">飞书同步</button>
+        </div>
+
+        <!-- ===== 子页面0：班次设置 ===== -->
+        <div class="settings-subpage active" id="settings-sub-0">
+            <div class="box">
+                <h3>班次采集速率</h3>
+                <p class="settings-hint">输入期望总条数和可用机器数，自动反推单台产能。导入任务包时若任务无预估时长，将据此和名称关键词自动推算。</p>
+                <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <label>时长：<input id="s-effective-minutes" type="number" min="60" max="1440" value="570" style="width:80px;" onchange="onRateParamChange()"> 分钟</label>
+                    <span style="color:var(--text-muted);">→</span>
+                    <label>期望总条数：<input id="s-total-items" type="number" min="100" max="100000" value="3600" style="width:100px;" onchange="onRateParamChange()"></label>
+                    <label>工作机器数：<input id="s-machine-count" type="number" min="1" max="200" value="24" style="width:80px;" onchange="onRateParamChange()"></label>
+                    <span style="color:var(--text-muted);">→</span>
+                    <label>条/台/班次：<input id="s-rate-per-shift" type="number" value="150" readonly style="width:80px;background:var(--bg-muted);"></label>
+                </div>
+                <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">
+                    推算参考：25条任务基础时长约 <span id="rate-per-25-display">95</span> 分钟（25 × 时长 ÷ 条/台/班次）
+                </p>
+            </div>
+            <div class="box">
+                <h3>留言板设置</h3>
+                <p class="settings-hint">在班次设置页面底部显示便签留言板，用于跨班留言或备忘</p>
+                <label><input type="checkbox" id="s-forum-enabled" checked onchange="applyForumEnabled(this.checked)"> 启用留言板</label>
+            </div>
+            <div class="box">
+                <h3>便签保留天数</h3>
+                <p class="settings-hint">超过该天数的便签将自动删除（默认3天，最多30天）</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-forum-retention" type="range" min="1" max="30" step="1" value="3" onchange="onRetentionSliderChange(this.value)">
+                    <span id="s-forum-retention-val">3</span> 天
+                </div>
+            </div>
+            <div class="box" style="opacity:0.5;">
+                <h3>显示模式（暂不可用）</h3>
+                <p class="settings-hint" style="color:var(--text-muted);">分班模式已暂时关闭。当前仅支持连续模式。</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span id="display-mode-label" style="font-weight:600;">当前：连续模式</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 子页面1：机器管理设置 ===== -->
+        <div class="settings-subpage" id="settings-sub-1">
+            <div class="box">
+                <h3>机器类型</h3>
+                <p class="settings-hint">增删改机器类型会同步更新所有关联数据（机器、任务、排班）。至少保留一个类型。</p>
+                <div class="settings-crud-bar">
+                    <input id="s_mtype_key" placeholder="新类型名称" style="width:160px">
+                    <button class="btn" onclick="settingsAdd('machine_types')">添加</button>
+                </div>
+                <table id="s-machine-types-table"><tr><th>名称</th><th>排序</th><th>引用</th><th>操作</th></tr></table>
+            </div>
+            <div class="box">
+                <h3>任务类型</h3>
+                <p class="settings-hint">增删改任务类型会同步更新所有关联数据。至少保留一个类型。</p>
+                <div class="settings-crud-bar">
+                    <input id="s_tkind_key" placeholder="新类型名称" style="width:160px">
+                    <button class="btn" onclick="settingsAdd('task_kinds')">添加</button>
+                </div>
+                <table id="s-task-kinds-table"><tr><th>名称</th><th>排序</th><th>引用</th><th>操作</th></tr></table>
+            </div>
+        </div>
+
+        <!-- ===== 子页面2：任务库设置 ===== -->
+        <div class="settings-subpage" id="settings-sub-2">
+            <div class="box">
+                <h3>优先级</h3>
+                <p class="settings-hint">增删改优先级会同步更新所有关联任务。至少保留一个优先级。</p>
+                <div class="settings-crud-bar">
+                    <input id="s_pri_key" placeholder="新优先级名称" style="width:160px">
+                    <button class="btn" onclick="settingsAdd('priorities')">添加</button>
+                </div>
+                <table id="s-priorities-table"><tr><th>名称</th><th>排序</th><th>引用</th><th>操作</th></tr></table>
+            </div>
+            <div class="box">
+                <h3>难度</h3>
+                <p class="settings-hint">增删改难度会同步更新所有关联任务。'无'不可删除、不可改名。至少保留一个难度。</p>
+                <div class="settings-crud-bar">
+                    <input id="s_diff_key" placeholder="新难度名称" style="width:160px">
+                    <button class="btn" onclick="settingsAdd('difficulties')">添加</button>
+                </div>
+                <table id="s-difficulties-table"><tr><th>名称</th><th>排序</th><th>引用</th><th>操作</th></tr></table>
+            </div>
+            <div class="box">
+                <h3>修改弹窗背景透明度</h3>
+                <p class="settings-hint">控制任务修改抽屉的背景透明度（文字和控件不受影响）</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-task-dialog-bg-opacity" type="range" min="0.2" max="1" step="0.05" value="1" oninput="applyUISetting('task_dialog_bg_opacity', this.value)">
+                    <span id="s-task-dialog-bg-val">1</span>
+                </div>
+            </div>
+            <div class="box">
+                <h3>任务即将提醒阈值</h3>
+                <p class="settings-hint">当"采集中"或"暂停中"的任务距离结束时间小于此阈值时，状态分别变为"采集即将完成"或"暂停即将超时"</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-pending-alert-minutes" type="range" min="1" max="60" value="15" oninput="applyScheduleSetting('pending_alert_minutes', this.value);document.getElementById('s-pending-alert-val').textContent=this.value">
+                    <span id="s-pending-alert-val">15</span>
+                    <span>分钟</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 子页面3：排班面板设置 ===== -->
+        <div class="settings-subpage" id="settings-sub-3">
+            <div class="box">
+                <h3>弹窗遮罩透明度</h3>
+                <p class="settings-hint">控制自动分配和批量延迟弹窗背后遮罩的透明度（0=完全透明，1=完全不透明）</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-overlay-transparency" type="range" min="0" max="1" step="0.05" value="0.85" oninput="applyUISetting('overlay_transparency', this.value)">
+                    <span id="s-transparency-val">0.85</span>
+                </div>
+            </div>
+            <div class="box">
+                <h3>弹窗背景透明度</h3>
+                <p class="settings-hint">控制排班面板弹窗的背景透明度（自动分配/批量延迟）</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-schedule-dialog-bg-opacity" type="range" min="0.2" max="1" step="0.05" value="1" oninput="applyUISetting('schedule_dialog_bg_opacity', this.value)">
+                    <span id="s-schedule-dialog-bg-val">1</span>
+                </div>
+            </div>
+            <div class="box">
+                <h3>时间轴叠加层显示</h3>
+                <p class="settings-hint">控制双班/白班/夜班/自定义四个时间轴界面上的工作时段叠加层是否显示</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="checkbox" id="s-show-overlay" checked onchange="applyUISetting('show_shift_overlay', this.checked?'1':'0')"> 显示工作时段叠加层（绿色段）</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>动画开关</h3>
+                <p class="settings-hint">控制时间条回收/完成/删除等动画效果</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="checkbox" id="s-enable-animations" checked onchange="applyUISetting('enable_animations', this.checked?'1':'0')"> 启用动画效果</label>
+                    <label style="margin-left:16px;"><input type="checkbox" id="s-enable-tooltip-anim" checked onchange="applyUISetting('enable_tooltip_animation', this.checked?'1':'0')"> 悬浮提示渐入动画</label>
+                    <label style="margin-left:16px;">悬浮延迟：<input type="number" id="s-tooltip-delay" value="3" min="1" max="10" step="0.5" style="width:60px;" onchange="applyUISetting('tooltip_delay', this.value)"> 秒</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>任务栏字体大小</h3>
+                <p class="settings-hint">控制时间轴上任务条的字体大小（范围 8px ~ 16px，默认 11px）</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-task-block-font-size" type="range" min="8" max="16" step="1" value="11" oninput="applyUISetting('task_block_font_size', this.value)">
+                    <span id="s-task-block-font-size-val">11px</span>
+                </div>
+            </div>
+            <div class="box">
+                <h3>精简任务块名称</h3>
+                <p class="settings-hint">开启后任务块仅显示任务名，隐藏机型、优先级、难度等附加信息</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="checkbox" id="s-compact-task-label" onchange="applyScheduleSetting('compact_task_label', this.checked?'1':'0')"> 精简显示（仅名称）</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>显示任务包名称</h3>
+                <p class="settings-hint">开启后在时间轴任务块上显示所属任务包名称</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="checkbox" id="s-show-package-name" checked onchange="applyScheduleSetting('show_package_name', this.checked?'1':'0')"> 在任务块上显示任务包名称</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>切割后第二段去向</h3>
+                <p class="settings-hint">控制任务切割后第二段的默认放置位置</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="radio" name="s-split-placement" value="inline" onchange="applyScheduleSetting('split_placement', this.value)"> 留在原机器后面</label>
+                    <label style="margin-left:12px;"><input type="radio" name="s-split-placement" value="pool" onchange="applyScheduleSetting('split_placement', this.value)"> 回到任务池</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>从任务区拖拽类型拦截</h3>
+                <p class="settings-hint">开启后，从待分配任务区拖拽任务到类型/机器类型不匹配的机器时直接拦截；关闭后弹出二次确认弹窗</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="checkbox" id="s-cross-type-block" onchange="applyScheduleSetting('cross_type_block', this.checked?'1':'0')"> 拦截类型不匹配的拖放（任务区→时间轴）</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>任务池样式</h3>
+                <p class="settings-hint">初版为简单的行内自动换行布局；新版为 CSS Grid 多列弹性布局</p>
+                <label><input type="checkbox" id="s-pool-modern-style" onchange="applyScheduleSetting('pool_modern_style', this.checked?'1':'0')"> 新版任务池样式（Grid 多列布局）</label>
+                <div id="pool-columns-row" style="display:none;align-items:center;gap:8px;margin-top:8px;">
+                    <span style="font-size:12px;color:var(--text-muted);">列数：</span>
+                    <input type="range" id="s-pool-modern-columns" min="1" max="8" value="2" oninput="document.getElementById('pool-cols-display').textContent=this.value; applyScheduleSetting('pool_modern_columns', this.value)" style="width:140px;">
+                    <span id="pool-cols-display" style="font-size:12px;font-weight:600;">2</span>
+                    <span style="font-size:11px;color:var(--text-muted);">（仅影响下方跟随/底部固定模式，浮动窗口始终1列）</span>
+                </div>
+            </div>
+            <div class="box">
+                <h3>夜班视图模式</h3>
+                <p class="settings-hint">简洁模式显示单夜班+左右切换开关；扩展模式显示前后夜班+白班虚影</p>
+                <select id="s-night-view-style" onchange="applyUISetting('night_view_style', this.value)">
+                    <option value="simple">简洁模式（推荐）</option>
+                    <option value="extended">扩展模式</option>
+                </select>
+            </div>
+            <div class="box" id="color-box-overlay">
+                <h3>时段叠加层颜色</h3>
+                <p class="settings-hint">设置排班面板上工作时间段、加班段、休息段、间隙段的叠加颜色。可通过上方开关控制显示/隐藏</p>
+                <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        工作时间段：<input type="color" id="cs-seg-work" onchange="applyColorSetting('seg_work', this.value)">
+                        <span class="color-hex-label" id="cs-seg-work-hex">#facc15</span>
+                        <button class="btn-sm" onclick="resetColorSetting('seg_work');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        加班时间段：<input type="color" id="cs-seg-ot" onchange="applyColorSetting('seg_ot', this.value)">
+                        <span class="color-hex-label" id="cs-seg-ot-hex">#f97316</span>
+                        <button class="btn-sm" onclick="resetColorSetting('seg_ot');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        休息时间段：<input type="color" id="cs-seg-break" onchange="applyColorSetting('seg_break', this.value)">
+                        <span class="color-hex-label" id="cs-seg-break-hex">#3b82f6</span>
+                        <button class="btn-sm" onclick="resetColorSetting('seg_break');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        工作间隔段：<input type="color" id="cs-seg-gap" onchange="applyColorSetting('seg_gap', this.value)">
+                        <span class="color-hex-label" id="cs-seg-gap-hex">#000000</span>
+                        <button class="btn-sm" onclick="resetColorSetting('seg_gap');return false;" title="恢复默认值">↺</button>
+                    </label>
+                </div>
+            </div>
+            <div class="box" id="color-box-types">
+                <h3>机器类型任务条颜色</h3>
+                <p class="settings-hint">为每一种机器类型设置其在时间轴上任务条的颜色。在机器管理设置中增删类型后此处自动联动</p>
+                <div id="cs-type-colors-container" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px;">
+                </div>
+            </div>
+            <div class="box" id="color-box-states">
+                <h3>特殊任务状态颜色</h3>
+                <p class="settings-hint">设置已完成任务、切割任务、维修轨道和维修中任务栏的颜色</p>
+                <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        已完成任务：<input type="color" id="cs-state-completed" onchange="applyColorSetting('completed', this.value)">
+                        <span class="color-hex-label" id="cs-state-completed-hex">#84cc16</span>
+                        <button class="btn-sm" onclick="resetColorSetting('completed');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        切割任务：<input type="color" id="cs-state-split" onchange="applyColorSetting('split', this.value)">
+                        <span class="color-hex-label" id="cs-state-split-hex">#a78bfa</span>
+                        <button class="btn-sm" onclick="resetColorSetting('split');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        维修轨道背景：<input type="color" id="cs-state-repair-bg" onchange="applyColorSetting('repair_bg', this.value)">
+                        <span class="color-hex-label" id="cs-state-repair-bg-hex">#fef2f2</span>
+                        <button class="btn-sm" onclick="resetColorSetting('repair_bg');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        维修轨道边框：<input type="color" id="cs-state-repair-border" onchange="applyColorSetting('repair_border', this.value)">
+                        <span class="color-hex-label" id="cs-state-repair-border-hex">#fca5a5</span>
+                        <button class="btn-sm" onclick="resetColorSetting('repair_border');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        暂停中任务栏：<input type="color" id="cs-state-paused" onchange="applyColorSetting('paused', this.value)">
+                        <span class="color-hex-label" id="cs-state-paused-hex">#fca5a5</span>
+                        <button class="btn-sm" onclick="resetColorSetting('paused');return false;" title="恢复默认值">↺</button>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        维修中任务栏：<input type="color" id="cs-state-post-pause" onchange="applyColorSetting('post_pause', this.value)">
+                        <span class="color-hex-label" id="cs-state-post-pause-hex">#fbcfe8</span>
+                        <button class="btn-sm" onclick="resetColorSetting('post_pause');return false;" title="恢复默认值">↺</button>
+                    </label>
+                </div>
+            </div>
+            <div class="box" id="priority-color-box">
+                <h3>优先级颜色</h3>
+                <p class="settings-hint">任务条上优先级的文字颜色。关闭时优先级与任务名同色。</p>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                    <label style="font-size:12px;"><input type="checkbox" id="s-priority-color-enabled" onchange="applyScheduleSetting('priority_color_enabled', this.checked?'1':'0');togglePriorityColors();"> 启用优先级着色</label>
+                </div>
+                <div id="priority-color-inputs" style="display:none;flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px;">
+                    <!-- JS 动态填充 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 子页面4：历史记录设置 ===== -->
+        <div class="settings-subpage" id="settings-sub-4">
+            <div class="box">
+                <h3>修改弹窗背景透明度</h3>
+                <p class="settings-hint">控制历史记录编辑弹窗的背景透明度（文字和控件不受影响）</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-hist-dialog-bg-opacity" type="range" min="0.2" max="1" step="0.05" value="1" oninput="applyUISetting('hist_dialog_bg_opacity', this.value)">
+                    <span id="s-hist-dialog-bg-val">1</span>
+                </div>
+            </div>
+            <div class="box">
+                <h3>导出Excel文件名</h3>
+                <p class="settings-hint">修改历史记录导出Excel的文件名（仅修改日期筛选词前面的部分）</p>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <label>文件名前缀：<input id="s-export-filename" value="排班已完成任务" style="width:260px"></label>
+                    <button class="btn" onclick="applyUISetting('export_filename', document.getElementById('s-export-filename').value)">保存</button>
+                </div>
+                <p style="color:var(--text-muted);font-size:12px;margin-top:4px;">示例：<span id="s-export-preview">排班已完成任务（2024-01-01~2024-01-07）.xlsx</span></p>
+            </div>
+        </div>
+
+        <!-- ===== 子页面5：系统设置 ===== -->
+        <div class="settings-subpage" id="settings-sub-5">
+            <div class="box">
+                <h3>导航栏顺序</h3>
+                <p class="settings-hint">拖拽调整顶部导航栏和侧边栏的页面顺序，保存后立即生效。</p>
+                <ul class="sortable-list" id="s-nav-order"></ul>
+                <button class="btn" style="margin-top:10px;" onclick="saveNavOrder()">保存顺序</button>
+            </div>
+            <div class="box">
+                <h3>Toast轻提示显示时长</h3>
+                <p class="settings-hint">控制右上角操作提示自动消失的时间</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input id="s-toast-duration" type="range" min="1" max="10" step="0.5" value="3" oninput="applyUISetting('toast_duration', this.value)">
+                    <span id="s-toast-duration-val">3</span> 秒
+                </div>
+            </div>
+            <div class="box">
+                <h3>主题模式</h3>
+                <p class="settings-hint">选择亮色、暗色或跟随系统主题</p>
+                <div style="display:flex;gap:16px;align-items:center;">
+                    <label><input type="radio" name="s-theme-mode" value="auto" onchange="applyThemeMode(this.value)"> 跟随系统</label>
+                    <label style="margin-left:12px;"><input type="radio" name="s-theme-mode" value="light" onchange="applyThemeMode(this.value)"> 亮色</label>
+                    <label style="margin-left:12px;"><input type="radio" name="s-theme-mode" value="dark" onchange="applyThemeMode(this.value)"> 暗色</label>
+                </div>
+            </div>
+            <div class="box">
+                <h3>粒子背景</h3>
+                <p class="settings-hint">在页面背景显示动态粒子网络效果（点击开关立即生效）</p>
+                <label><input type="checkbox" id="s-particle-bg" onchange="applyUISetting('particle_background', this.checked?'1':'0')"> 启用粒子背景</label>
+            </div>
+            <div class="box">
+                <h3>彩带动画</h3>
+                <p class="settings-hint">在页面背景显示流动的彩色多边形彩带（点击开关立即生效）</p>
+                <label><input type="checkbox" id="s-ribbons" onchange="applyUISetting('ribbon_effect', this.checked?'1':'0')"> 启用彩带动画</label>
+            </div>
+            <div class="box">
+                <h3>自然生态种群动画</h3>
+                <p class="settings-hint">在页面中显示蝴蝶动画（暗色模式下自动切换为萤火虫），会飞行、停靠在卡片边缘（点击开关立即生效）</p>
+                <label><input type="checkbox" id="s-butterflies" onchange="applyUISetting('butterfly_animation', this.checked?'1':'0')"> 启用自然生态种群动画</label>
+            </div>
+            <div class="box">
+                <h3>按钮波纹效果</h3>
+                <p class="settings-hint">点击按钮时显示水波扩散动画</p>
+                <label><input type="checkbox" id="s-btn-ripple" checked onchange="applyUISetting('button_ripple', this.checked?'1':'0')"> 启用按钮波纹</label>
+            </div>
+            <div class="box">
+                <h3>卡片发光悬停</h3>
+                <p class="settings-hint">鼠标悬停卡片时显示柔和发光边框</p>
+                <label><input type="checkbox" id="s-glow-hover" checked onchange="applyUISetting('glow_hover', this.checked?'1':'0')"> 启用发光悬停</label>
+            </div>
+        </div>
+
+        <!-- ===== 子页面6：数据管理 ===== -->
+        <div class="settings-subpage" id="settings-sub-6">
+            <!-- 数据库信息卡片 -->
+            <div class="box">
+                <h3>数据库信息</h3>
+                <div id="save-db-info" style="font-size:12px;color:#666;line-height:1.8;">
+                    加载中...
+                </div>
+            </div>
+
+            <!-- 自动存档保留天数 -->
+            <div class="box">
+                <h3>自动存档保留天数</h3>
+                <p class="settings-hint">超过此天数的自动存档将被自动清理</p>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <input type="range" id="s-autosave-retention" min="7" max="180" value="60" step="1">
+                    <span id="autosave-retention-display">60</span> 天
+                </div>
+            </div>
+
+            <!-- 快速存档 -->
+            <div class="box">
+                <h3>快速存档</h3>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <input id="save-note-input" placeholder="存档备注（可选）" style="flex:1;min-width:200px;">
+                    <button class="btn" onclick="quickSave()" style="background:var(--success);">&#128190; 保存当前存档</button>
+                </div>
+            </div>
+
+            <!-- 存档列表 -->
+            <div class="box">
+                <h3>存档管理</h3>
+                <div id="manual-saves-section" style="margin-bottom:12px;">
+                    <h4 style="font-size:13px;color:var(--text);margin:0 0 6px;">手动存档</h4>
+                    <div id="manual-saves-container" style="max-height:250px;overflow-y:auto;">
+                        加载中...
+                    </div>
+                </div>
+                <div id="auto-saves-section">
+                    <h4 style="font-size:13px;color:var(--text);margin:0 0 6px;">自动存档</h4>
+                    <div id="auto-saves-container" style="max-height:250px;overflow-y:auto;">
+                        加载中...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 导入存档 -->
+            <div class="box" id="save-import-box">
+                <h3>导入外部存档</h3>
+                <div id="save-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;"
+                     onclick="document.getElementById('save-upload-input').click()">
+                    <div style="font-size:28px;margin-bottom:6px;">&#128229;</div>
+                    <div style="font-size:13px;color:var(--text-secondary);">拖拽 <b>.sqlite3</b> 文件到此处导入</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">或点击此处选择文件</div>
+                </div>
+                <input type="file" id="save-upload-input" accept=".sqlite3" style="display:none;" onchange="uploadSaveFile(this)">
+            </div>
+
+            <!-- 数据库位置管理 -->
+            <div class="box">
+                <h3>数据库位置管理</h3>
+                <div id="save-db-location-info" style="font-size:12px;color:#666;margin-bottom:8px;">加载中...</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input id="db-transfer-path" placeholder="新数据库文件路径（如 D:\data\task_schedule.db）" style="flex:1;min-width:250px;">
+                        <button class="btn" onclick="transferDatabase()" style="background:#1976d2;color:#fff;">转移数据库（复制到新位置）</button>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input id="db-switch-path" placeholder="已有数据库文件路径" style="flex:1;min-width:250px;">
+                        <button class="btn" onclick="switchDatabase()" style="background:#e6a23c;color:#fff;">切换数据库（指向已有文件）</button>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input id="save-dir-path" placeholder="存档目录路径（如 D:\backups\saves）" style="flex:1;min-width:250px;">
+                        <button class="btn" onclick="changeSaveDirectory()" style="background:#67c23a;color:#fff;">更改存档目录</button>
+                    </div>
+                </div>
+                <div style="font-size:11px;color:#999;margin-top:6px;">
+                    转移：复制当前数据库到新位置并自动切换；切换：指向已有数据库文件；更改存档目录：仅修改存档存储位置
+                </div>
+                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                    <button class="btn" onclick="resetDatabase()" style="background:#c62828;color:#fff;">重置数据库（恢复初始状态）</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 子页面7：飞书同步 ===== -->
+        <div class="settings-subpage" id="settings-sub-7">
+            <!-- 飞书数据同步开关 -->
+            <div class="box">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <h3 style="margin:0;">飞书数据同步</h3>
+                        <p class="settings-hint" style="margin-bottom:0;">开启后将排班数据同步到飞书多维表格。关闭不会丢失已同步的数据，仅停止新的同步操作。</p>
+                    </div>
+                    <div class="ios-toggle" id="feishu-toggle" onclick="toggleFeishuSync(!this.classList.contains('active'))" style="flex-shrink:0;margin-left:16px;">
+                        <div class="ios-toggle-track">
+                            <div class="ios-toggle-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <span id="feishu-toggle-label" style="font-size:12px;color:#9ca3af;margin-top:4px;display:inline-block;">飞书同步已关闭</span>
+            </div>
+
+            <!-- 飞书同步仪表盘 -->
+            <div id="feishu-status-area" style="display:none;">
+
+                <!-- KPI 行 -->
+                <div class="box" style="padding:12px 16px;">
+                    <div id="fs-kpi-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:10px;">
+                        <div class="fs-kpi-card" id="fs-kpi-connection">
+                            <div class="fs-kpi-label">连接状态</div>
+                            <div class="fs-kpi-value" id="fs-kpi-conn-val">—</div>
+                        </div>
+                        <div class="fs-kpi-card" id="fs-kpi-coverage">
+                            <div class="fs-kpi-label">映射覆盖</div>
+                            <div class="fs-kpi-value" id="fs-kpi-cov-val">—</div>
+                            <div class="fs-mini-bar"><div class="fs-mini-bar-fill" id="fs-kpi-cov-bar"></div></div>
+                        </div>
+                        <div class="fs-kpi-card" id="fs-kpi-health">
+                            <div class="fs-kpi-label">同步健康</div>
+                            <div class="fs-kpi-value" id="fs-kpi-health-val">—</div>
+                        </div>
+                        <div class="fs-kpi-card" id="fs-kpi-push">
+                            <div class="fs-kpi-label">上次推送</div>
+                            <div class="fs-kpi-value" id="fs-kpi-push-val">—</div>
+                        </div>
+                        <div class="fs-kpi-card" id="fs-kpi-countdown">
+                            <div class="fs-kpi-label">距下次同步</div>
+                            <div class="fs-kpi-value" id="fs-kpi-cd-val">—</div>
+                        </div>
+                        <div class="fs-kpi-card" id="fs-kpi-event-push">
+                            <div class="fs-kpi-label">事件推送</div>
+                            <div class="fs-kpi-value" id="fs-kpi-ep-val">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态区：进度条 + 机器事件日志 -->
+                <div class="box" id="fs-status-area" style="padding:10px 16px;">
+                    <div id="fs-status-header"></div>
+                    <div id="fs-status-bar"></div>
+                    <div id="fs-status-log"></div>
+                </div>
+
+                <!-- 数据库完整性警告 -->
+                <div class="box" id="fs-db-integrity-warn" style="display:none;padding:8px 16px;background:#fef2f2;border:1px solid #fca5a5;">
+                    <span style="color:#dc2626;">⚠ 数据库完整性检查失败，建议从存档恢复</span>
+                </div>
+
+                <!-- 最近活动：操作聚合记录 -->
+                <div class="box" id="fs-recent-activity" style="padding:10px 16px;">
+                    <div style="font-weight:600;font-size:13px;margin-bottom:8px;">📋 最近活动</div>
+                    <div id="fs-recent-list" style="font-size:12px;max-height:240px;overflow-y:auto;"></div>
+                </div>
+
+                <!-- 机器同步状态（可折叠） -->
+                <div class="box fs-collapsible" id="fs-machine-box">
+                    <div class="fs-collapsible-header" onclick="toggleMachineList()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+                        <span style="font-weight:600;font-size:13px;">🖥️ 机器同步状态 <span id="fs-machine-summary"></span></span>
+                        <span id="fs-machine-arrow" style="font-size:10px;color:#9ca3af;">展开 ▼</span>
+                    </div>
+                    <div id="fs-machine-list" style="display:none;margin-top:8px;font-size:12px;"></div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="box" style="padding:10px 16px;">
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                        <button class="btn-sm fs-btn-primary" id="feishu-init-btn" style="display:none;" onclick="initFeishuSync()">⟳ 初始化</button>
+                        <button class="btn-sm fs-btn-success" id="feishu-push-now-btn" onclick="pushFeishuNow()" title="暂停自动推送 → 等待推送完成 → 重新开始计时">⬆ 推送</button>
+                        <button class="btn-sm fs-btn-warn" id="feishu-pull-now-btn" onclick="pullFeishuNow()" title="暂停自动推送 → 等待拉取完成 → 重新开始计时">⬇ 拉取</button>
+                        <span style="color:#cbd5e1;margin:0 4px;">|</span>
+                        <button class="btn-sm" onclick="scanFeishuTables()">📋 扫描</button>
+                        <button class="btn-sm" id="feishu-refresh-btn" onclick="refreshFeishuStatus()">🔄 刷新</button>
+                        <button class="btn-sm" style="background:#991b1b;color:#fca5a5;border:1px solid #ef4444;" onclick="cleanupFeishuTables()">🗑 清理</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 推送设置 -->
+            <div class="box" id="feishu-push-box">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <h3 style="margin:0;">&#128232; 推送设置</h3>
+                        <p class="settings-hint" style="margin-bottom:0;">配置排班通知推送到飞书群</p>
+                    </div>
+                    <div class="ios-toggle" id="push-toggle" onclick="togglePush(!this.classList.contains('active'))" style="flex-shrink:0;margin-left:16px;">
+                        <div class="ios-toggle-track">
+                            <div class="ios-toggle-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <span id="push-toggle-label" style="font-size:12px;color:#9ca3af;margin-top:4px;display:inline-block;">推送已关闭</span>
+                <div id="push-config-area" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+                    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;">群聊列表</label>
+                    <p style="font-size:10px;color:var(--text-muted);margin:0 0 8px;">给群起个名，填入 oc_ 开头的 chat_id 后点添加</p>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <input id="push-chat-name" placeholder="群名称" style="flex:1;min-width:100px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+                        <input id="push-chat-id" placeholder="oc_xxxx" style="flex:2;min-width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:monospace;">
+                        <button class="btn" onclick="addChatGroup()" style="background:var(--primary);color:#fff;white-space:nowrap;">➕ 添加</button>
+                    </div>
+                    <div id="push-chat-tags" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+                    <!-- 事件推送开关矩阵 -->
+                    <div id="push-event-toggles" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+                        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:8px;">📨 推送事件设置</label>
+                        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);">场景</th>
+                                    <th style="text-align:center;padding:6px 8px;border-bottom:1px solid var(--border);">
+                                        发给小组长<br>
+                                        <button class="btn-sm" id="push-select-all-leader" onclick="toggleEventColumn('leader')" style="font-size:10px;padding:2px 6px;">全选</button>
+                                    </th>
+                                    <th style="text-align:center;padding:6px 8px;border-bottom:1px solid var(--border);">
+                                        发给群<br>
+                                        <button class="btn-sm" id="push-select-all-group" onclick="toggleEventColumn('group')" style="font-size:10px;padding:2px 6px;">全选</button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="push-event-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 截图渲染样式（暂不可用）
+                    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);opacity:0.5;">
+                        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">📸 截图渲染样式（暂不可用）</label>
+                        <p style="font-size:10px;color:var(--text-muted);margin:0 0 8px;">matplotlib 后端渲染样式设计中，当前仅支持 html2canvas 手动截图。</p>
+                        <select id="push-screenshot-engine" onchange="savePushConfig()" disabled style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+                            <option value="html2canvas">html2canvas（前端截图，与页面一致）</option>
+                            <option value="matplotlib">matplotlib（后端渲染，样式设计中）</option>
+                        </select>
+                    </div>
+                    -->
+                    <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+                        <input id="push-test-msg" value="🧪 推送测试消息" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;min-width:180px;">
+                        <button class="btn" onclick="testPush()">🚀 发送</button>
+                        <button class="btn" onclick="reportNow()" style="white-space:nowrap;">📊 班次总结</button>
+                    </div>
+                </div>
+                <div id="push-sync-warning" style="display:none;margin-top:10px;font-size:11px;color:#f59e0b;">
+                    ⚠ 飞书同步未开启，推送不会生效
+                </div>
+            </div>
+
+            <!-- 应用凭证（放最下面） -->
+            <div class="box" id="feishu-cred-box" style="border-left: 3px solid var(--primary);">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <h3 style="margin:0;">🔑 飞书应用凭证</h3>
+                        <p class="settings-hint" style="margin-bottom:0;">
+                            填入你自己创建的飞书应用的凭证，同步和推送才能正常工作。换应用或换表格后需重新初始化。
+                        </p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span id="feishu-cred-status" style="font-size:12px;font-weight:500;color:var(--text-muted);">未验证</span>
+                    </div>
+                </div>
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+                    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+                        <span style="flex:0 0 90px;font-size:13px;font-weight:500;color:var(--text-secondary);text-align:right;padding-top:8px;">App ID</span>
+                        <div style="flex:1;">
+                            <input id="feishu-app-id" type="text" placeholder="cli_ 开头，如 cli_aa8ffc77eff89bdb" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:monospace;">
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">飞书开放平台 → 应用设置 → 凭证与基础信息 → App ID</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+                        <span style="flex:0 0 90px;font-size:13px;font-weight:500;color:var(--text-secondary);text-align:right;padding-top:8px;">App Secret</span>
+                        <div style="flex:1;">
+                            <input id="feishu-app-secret" type="password" placeholder="应用密钥，与 App ID 在同一页面" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:monospace;">
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">飞书开放平台 → 应用设置 → 凭证与基础信息 → App Secret（点击"显示"复制）</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:0;">
+                        <span style="flex:0 0 90px;font-size:13px;font-weight:500;color:var(--text-secondary);text-align:right;padding-top:8px;">App Token</span>
+                        <div style="flex:1;">
+                            <input id="feishu-app-token" type="text" placeholder="多维表格网址 /base/ 后面那串" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:monospace;">
+                            <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">打开你的飞书多维表格 → 浏览器地址栏 → <code style="font-size:10px;">/base/</code> 后面到 <code style="font-size:10px;">?</code> 或末尾之间的字符串</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                    <button class="btn btn-sm" onclick="saveFeishuCredentials(false)" style="background:var(--primary);color:#fff;border-color:var(--primary);">💾 保存</button>
+                    <button class="btn btn-sm" onclick="saveFeishuCredentials(true)">🔄 保存并验证</button>
+                    <button class="btn btn-sm" onclick="testFeishuConnection()">🔗 测试连接</button>
+                    <button class="btn btn-sm" onclick="resetFeishuCredentials()" title="恢复为默认飞书应用凭证">↩ 恢复默认</button>
+                    <span id="feishu-cred-msg" style="font-size:11px;color:var(--text-muted);"></span>
+                </div>
+            </div>
+
+        </div>
+    </div>

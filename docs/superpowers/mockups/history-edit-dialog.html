@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>历史记录编辑弹窗 Mockup</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #f1f5f9;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #1e293b;
+}
+
+.overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.4);
+    backdrop-filter: blur(2px);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.dialog {
+    background: #fff;
+    border-radius: 14px;
+    width: 720px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05);
+    animation: slideUp 0.25s ease;
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 头部 ── */
+.dialog-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.dialog-header h2 {
+    font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+}
+.dialog-header h2 .icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 15px;
+}
+.close-btn {
+    width: 34px; height: 34px;
+    border: none; background: #f1f5f9;
+    border-radius: 8px; cursor: pointer;
+    font-size: 18px; color: #64748b;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.close-btn:hover { background: #e2e8f0; color: #1e293b; }
+
+/* ── 主体 ── */
+.dialog-body { padding: 24px 28px; }
+
+/* ── 时间段区块 ── */
+.time-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.time-section-header {
+    background: #f8fafc;
+    padding: 14px 20px;
+    font-size: 12px; font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.time-section-body { padding: 20px; }
+
+.time-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: end;
+}
+.time-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.time-block-label {
+    font-size: 13px; font-weight: 600;
+    color: #475569;
+}
+.time-block-fields {
+    display: flex; gap: 10px;
+}
+.time-block-fields input {
+    padding: 9px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px; color: #1e293b;
+    background: #fff;
+    transition: all 0.15s;
+    flex: 1;
+    min-width: 0;
+}
+.time-block-fields input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.time-arrow {
+    font-size: 20px; color: #cbd5e1;
+    padding-bottom: 10px;
+}
+
+/* ── 折叠 ── */
+.collapse-toggle {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+    padding: 18px 0 0;
+    border: none; background: none;
+    cursor: pointer;
+    font-size: 14px; font-weight: 600;
+    color: #6366f1;
+    transition: color 0.15s;
+}
+.collapse-toggle:hover { color: #4f46e5; }
+.collapse-toggle .arrow {
+    transition: transform 0.2s;
+    font-size: 12px;
+}
+.collapse-toggle.open .arrow { transform: rotate(90deg); }
+
+.collapse-body { display: none; padding-top: 18px; }
+.collapse-body.open { display: block; }
+
+/* ── 更多字段 ── */
+.fields-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+}
+.fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-group label {
+    font-size: 12px; font-weight: 600; color: #64748b;
+}
+.field-group input, .field-group select {
+    padding: 9px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px; color: #1e293b;
+    background: #fff;
+    transition: all 0.15s;
+}
+.field-group input:focus, .field-group select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.full-width { grid-column: 1 / -1; }
+
+/* ── 页脚 ── */
+.dialog-footer {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding: 16px 28px 22px;
+    border-top: 1px solid #f1f5f9;
+}
+.btn-primary {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+}
+.btn-cancel {
+    padding: 10px 24px;
+    background: #fff; color: #475569;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px; font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
+</style>
+</head>
+<body>
+
+<div class="overlay">
+<div class="dialog">
+    <div class="dialog-header">
+        <h2><span class="icon">&#9998;</span> 修改历史记录</h2>
+        <button class="close-btn">&times;</button>
+    </div>
+
+    <div class="dialog-body">
+        <!-- 时间段 -->
+        <div class="time-section">
+            <div class="time-section-header">实际完成时间段</div>
+            <div class="time-section-body">
+                <div class="time-grid">
+                    <div class="time-block">
+                        <div class="time-block-label">开始</div>
+                        <div class="time-block-fields">
+                            <input type="date" value="2024-03-15">
+                            <input type="time" value="08:00">
+                        </div>
+                    </div>
+                    <div class="time-arrow">→</div>
+                    <div class="time-block">
+                        <div class="time-block-label">结束</div>
+                        <div class="time-block-fields">
+                            <input type="date" value="2024-03-15">
+                            <input type="time" value="12:30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 更多字段 -->
+        <button class="collapse-toggle" onclick="toggleCollapse(this)">
+            <span class="arrow">&#9654;</span> 更多字段
+        </button>
+        <div class="collapse-body">
+            <div class="fields-section">
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label>任务名</label>
+                        <input value="示例任务A">
+                    </div>
+                    <div class="field-group">
+                        <label>机型</label>
+                        <select><option>CNC</option><option>车床</option></select>
+                    </div>
+                    <div class="field-group">
+                        <label>任务类型</label>
+                        <select><option>常规</option><option>紧急</option></select>
+                    </div>
+                    <div class="field-group">
+                        <label>维修时长</label>
+                        <input placeholder="如 30min">
+                    </div>
+                    <div class="field-group full-width">
+                        <label>备注</label>
+                        <input placeholder="备注信息">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-footer">
+        <button class="btn-cancel">取消</button>
+        <button class="btn-primary">保存修改</button>
+    </div>
+</div>
+</div>
+
+<script>
+function toggleCollapse(btn) {
+    btn.classList.toggle('open');
+    var body = btn.nextElementSibling;
+    body.classList.toggle('open');
+    var arrow = btn.querySelector('.arrow');
+    arrow.innerHTML = body.classList.contains('open') ? '&#9660;' : '&#9654;';
+}
+</script>
+</body>
+</html>

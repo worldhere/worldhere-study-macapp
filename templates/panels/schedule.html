@@ -1,0 +1,121 @@
+    <!-- ==================== 排班面板 ==================== -->
+    <div class="panel active">
+        <div class="box">
+            <h3>24小时可视化排班（全功能）</h3>
+            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <button class="tool-btn" style="background:var(--primary);" onclick="AA.open()">自动分配任务</button>
+                <button class="tool-btn" style="background:var(--warning);" onclick="openMassDelayDialog()">批量延迟</button>
+                <button id="export-image-btn" class="tool-btn" style="background:var(--primary);" onclick="handleExportImage()">导出图片</button>
+                <button id="export-pdf-btn" class="tool-btn" style="background:var(--danger);" onclick="handleExportPDF()">导出PDF</button>
+            </div>
+            <div class="view-controls">
+                <label>视图：</label>
+                <select id="view-mode" onchange="applyViewSettings()">
+                    <option value="double">双班(24h)</option>
+                    <option value="day">白班</option>
+                    <option value="night">夜班</option>
+                    <option value="custom">自定义</option>
+                </select>
+                <span id="night-offset-toggle" style="display:none;">
+                    <span class="night-offset-label" data-offset="-1" onclick="setNightOffset(-1)">← 前夜</span>
+                    <div class="night-offset-track" onclick="toggleNightOffset()">
+                        <div class="night-offset-thumb"></div>
+                    </div>
+                    <span class="night-offset-label" data-offset="0" onclick="setNightOffset(0)">当夜 →</span>
+                </span>
+                <span id="custom-range-controls" style="display:none;">
+                    <label>自定义：</label>
+                    <input id="custom-start-date" type="date" style="width:130px" onchange="applyViewSettings()">
+                    <input id="custom-start-time" style="width:65px" placeholder="09:00" onchange="applyViewSettings()">
+                    <span>→</span>
+                    <input id="custom-end-date" type="date" style="width:130px" onchange="applyViewSettings()">
+                    <input id="custom-end-time" style="width:65px" placeholder="18:30" onchange="applyViewSettings()">
+                </span>
+                <label>列宽：</label>
+                <input id="zoom-hour" type="range" min="20" max="240" value="80" oninput="setZoom()">
+                <label>行高：</label>
+                <input id="zoom-row" type="range" min="28" max="80" value="40" oninput="setZoom()">
+                <span class="op-mode-bar">
+                    <span style="font-size:12px;color:var(--text-muted);">操作：</span>
+                    <span class="op-mode-selector" id="op-mode-selector">
+                        <button class="op-mode-btn active" data-mode="edit" onclick="setOpMode('edit')">修改</button>
+                        <button class="op-mode-btn" data-mode="recycle" onclick="setOpMode('recycle')">回收</button>
+                        <button class="op-mode-btn" data-mode="complete" onclick="setOpMode('complete')">完成</button>
+                        <button class="op-mode-btn" data-mode="cut" onclick="setOpMode('cut')">切割</button>
+                        <button class="op-mode-btn" data-mode="delete" onclick="setOpMode('delete')">删除</button>
+                    </span>
+                    <button class="undo-redo-btn" id="undo-btn" disabled onclick="undoLastAction()" title="撤回 (Ctrl+Z)">↩</button>
+                    <button class="undo-redo-btn" id="redo-btn" disabled onclick="redoLastAction()" title="重做 (Ctrl+Y)">↪</button>
+                </span>
+                <label style="margin-left:8px;font-size:12px;"><input type="checkbox" id="snap-start-break" onchange="applyScheduleSetting('snap_start_to_break', this.checked?'1':'0');window._snapStartToBreak=this.checked;"> 开始时间避开休息段</label>
+                <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="snap-end-break" onchange="applyScheduleSetting('snap_end_to_break', this.checked?'1':'0');window._snapEndToBreak=this.checked;"> 结束时间避开休息段</label>
+                <label style="margin-left:8px;font-size:12px;"><input type="checkbox" id="show-current-marker" checked onchange="renderCurrentTimeMarker()"> 显示当前时间红线</label>
+                <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="sticky-machine-col" onchange="toggleStickyMachineCol()"> 置顶机器列</label>
+                <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="auto-compact-recycle" checked onchange="toggleAutoCompactRecycle()"> 回收后自动压实</label>
+                <label style="margin-left:4px;font-size:12px;"><input type="checkbox" id="auto-extend-repair" checked onchange="toggleAutoExtendRepair()"> 维修后自动延长任务</label>
+            </div>
+            <div class="timeline-container" onmousemove="showTimeTooltip(event)" onmouseout="hideTooltip()">
+                <div id="mask-left" class="range-mask" style="display:none;"></div>
+                <div id="mask-right" class="range-mask" style="display:none;"></div>
+                <div id="current-marker" class="current-time-marker"></div>
+                <div class="timeline-grid" id="timeline-header-date">
+                    <div class="machine-name-col"></div>
+                </div>
+                <div class="timeline-grid" id="timeline-header-hour">
+                    <div class="machine-name-col"></div>
+                </div>
+
+            </div>
+
+            <div class="pool-mode-bar" style="display:flex;align-items:center;gap:6px;margin-top:12px;">
+                <span style="font-size:12px;color:var(--text-muted);">任务区：</span>
+                <button class="btn pool-mode-btn" data-mode="below" onclick="setTaskPoolMode('below')" style="font-size:11px;padding:4px 10px;">下方跟随</button>
+                <button class="btn pool-mode-btn" data-mode="fixed" onclick="setTaskPoolMode('fixed')" style="font-size:11px;padding:4px 10px;">底部固定</button>
+                <button class="btn pool-mode-btn" data-mode="floating" onclick="setTaskPoolMode('floating')" style="font-size:11px;padding:4px 10px;">浮动窗口</button>
+            </div>
+
+            <div class="task-pool" id="task-pool" ondrop="dropToPool(event)" ondragover="allowDrop(event)">
+                <h4>待分配任务（拖拽到时间轴即可分配）</h4>
+                <div id="pool-filter-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                    <select id="pool-filter-type" onchange="filterTaskPool()">
+                        <option value="">全部机型</option>
+                        {% for mt in app_config.machine_types %}<option value="{{mt.key}}">{{mt.key}}</option>{% endfor %}
+                    </select>
+                    <select id="pool-filter-pri" onchange="filterTaskPool()">
+                        <option value="">全部优先级</option>
+                        {% for p in app_config.priorities %}<option value="{{p.key}}">{{p.key}}</option>{% endfor %}
+                    </select>
+                    <select id="pool-filter-diff" onchange="filterTaskPool()">
+                        <option value="">全部难度</option>
+                        {% for d in app_config.difficulties %}<option value="{{d.key}}">{{d.key}}</option>{% endfor %}
+                    </select>
+                </div>
+                <div id="pool-task-items"></div>
+                <span id="pool-page-controls" style="display:none;font-size:12px;gap:6px;align-items:center;margin-top:8px;"></span>
+            </div>
+            <!-- 导出加载遮罩 -->
+            <div id="export-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.88);backdrop-filter:blur(2px);z-index:9999;align-items:center;justify-content:center;">
+                <div style="text-align:center;">
+                    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;">
+                        <div class="eo-dot" style="width:12px;height:12px;border-radius:3px;background:#3b82f6;animation:eo-pulse 1.2s ease infinite;"></div>
+                        <div class="eo-dot" style="width:12px;height:12px;border-radius:3px;background:#10b981;animation:eo-pulse 1.2s ease 0.2s infinite;"></div>
+                        <div class="eo-dot" style="width:12px;height:12px;border-radius:3px;background:#f59e0b;animation:eo-pulse 1.2s ease 0.4s infinite;"></div>
+                        <div class="eo-dot" style="width:12px;height:12px;border-radius:3px;background:#ef4444;animation:eo-pulse 1.2s ease 0.6s infinite;"></div>
+                    </div>
+                    <div style="width:48px;height:48px;border:3px solid #e2e8f0;border-top:3px solid #3b82f6;border-radius:50%;margin:0 auto 16px;animation:eo-spin 0.8s linear infinite;"></div>
+                    <div id="export-overlay-title" style="font-size:14px;font-weight:600;color:#1e293b;">正在生成图片...</div>
+                    <div id="export-overlay-progress" style="display:none;font-size:12px;color:#64748b;margin-top:6px;">
+                        <span id="export-overlay-step" style="background:#e0e7ff;color:#3b82f6;padding:2px 8px;border-radius:3px;font-weight:600;"></span>
+                        <span id="export-overlay-label" style="margin-left:4px;font-size:11px;color:#94a3b8;"></span>
+                    </div>
+                    <div id="export-overlay-bar-wrap" style="display:none;width:160px;height:4px;background:#e2e8f0;border-radius:2px;margin:12px auto 0;overflow:hidden;">
+                        <div id="export-overlay-bar" style="height:100%;background:linear-gradient(90deg,#3b82f6,#ef4444);border-radius:2px;transition:width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+            <style>
+                @keyframes eo-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(0.6);opacity:0.4} }
+                @keyframes eo-spin { to{transform:rotate(360deg)} }
+            </style>
+        </div>
+    </div>

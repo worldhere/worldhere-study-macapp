@@ -1,0 +1,8 @@
+/* ========== 主样式入口 ========== */
+/* 按功能拆分，保持级联顺序：变量/主题 → 布局 → 时间轴 → 对话框 → 组件 */
+
+@import 'theme.css';
+@import 'layout.css';
+@import 'timeline.css';
+@import 'dialogs.css';
+@import 'components.css';
